@@ -30,3 +30,10 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
   committed to the repository), per the master prompt's instruction not to
   ship, rasterize, or use the image as a runtime asset — the board is
   recreated procedurally from the validated graph.
+- Known accessibility gap from Phase 3: multiple same-side pieces with no
+  other distinguishing state currently share an identical semantic label
+  (e.g. every unselected top bead reads as "Alice's bead"), so a TalkBack
+  user can tell a piece's owner but not which specific junction they're on
+  by label text alone (swipe order is still correct/consistent). Deferred to
+  Phase 7 (accessibility polish), where each node's label can include its
+  position in plain language.

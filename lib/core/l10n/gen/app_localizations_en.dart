@@ -91,6 +91,120 @@ class AppLocalizationsEn extends AppLocalizations {
       'The match engine isn\'t built yet — that\'s a later phase. Your setup has been saved.';
 
   @override
+  String get machineNotReadyMessage =>
+      'The computer opponent isn\'t built yet — that\'s a later phase. Your setup has been saved.';
+
+  @override
+  String get matchScreenTitle => 'Match';
+
+  @override
+  String turnBanner(String name) {
+    return '$name\'s turn';
+  }
+
+  @override
+  String get forcedCaptureBanner => 'Capture available — you must capture';
+
+  @override
+  String pieceNodeLabelOwn(String name) {
+    return '$name\'s bead';
+  }
+
+  @override
+  String get pieceNodeLabelEmpty => 'Empty junction';
+
+  @override
+  String get pieceNodeLegalMove => ', legal move';
+
+  @override
+  String get pieceNodeLegalCapture => ', legal capture';
+
+  @override
+  String get pieceNodeSelected => ', selected';
+
+  @override
+  String get pieceNodeLastMove => ', last move';
+
+  @override
+  String get pauseButton => 'Pause';
+
+  @override
+  String get resumeButton => 'Resume';
+
+  @override
+  String get restartButton => 'Restart';
+
+  @override
+  String get resignButton => 'Resign';
+
+  @override
+  String get undoButton => 'Undo';
+
+  @override
+  String get pausedOverlayTitle => 'Paused';
+
+  @override
+  String get pausedOverlayBody =>
+      'The clock is stopped. Tap Resume to continue.';
+
+  @override
+  String get restartConfirmTitle => 'Restart this match?';
+
+  @override
+  String get restartConfirmBody =>
+      'The current match will end immediately and a new one will start. This cannot be undone.';
+
+  @override
+  String get resignConfirmTitle => 'Resign this match?';
+
+  @override
+  String resignConfirmBody(String name) {
+    return '$name will lose the match immediately.';
+  }
+
+  @override
+  String get resignConfirmAction => 'Resign';
+
+  @override
+  String matchOverWinnerTitle(String name) {
+    return '$name wins';
+  }
+
+  @override
+  String get matchOverDrawTitle => 'Draw';
+
+  @override
+  String get matchOverReasonElimination => 'All opposing beads were captured.';
+
+  @override
+  String matchOverReasonNoLegalMoves(String name) {
+    return '$name had no legal move.';
+  }
+
+  @override
+  String matchOverReasonResignation(String name) {
+    return '$name resigned.';
+  }
+
+  @override
+  String matchOverReasonTimeout(String name) {
+    return '$name ran out of time.';
+  }
+
+  @override
+  String get matchOverReasonNoCaptureLimit =>
+      'No capture was made in 40 turns.';
+
+  @override
+  String get matchOverNewMatchButton => 'New Match';
+
+  @override
+  String get matchOverHomeButton => 'Home';
+
+  @override
+  String get timeUpMessage => 'Time\'s up';
+
+  @override
   String get rulesScreenTitle => 'How to Play';
 
   @override

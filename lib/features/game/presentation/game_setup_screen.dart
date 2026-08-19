@@ -1,9 +1,14 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/settings/settings_controller.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../game/engine/side.dart';
+import '../application/match_config.dart';
+import 'match_screen.dart';
 
 enum _MatchMode { twoPlayer, vsMachine }
 
@@ -11,12 +16,10 @@ enum _FirstTurn { random, playerOne, playerTwo }
 
 enum _Difficulty { easy, medium, difficult }
 
-/// Pre-game configuration screen ("New Match"). This is real, functional UI
-/// per the Phase 1 "placeholder-free reachable screens" requirement — it
-/// collects and validates a genuine match configuration. Starting an actual
-/// match is wired to the domain engine in a later phase (02-board-rules
-/// -and-engine.md); until then, Start reports that honestly instead of
-/// pretending a match exists.
+/// Pre-game configuration screen ("New Match"). Two-player mode launches a
+/// real match via [MatchScreen] against the Phase 2 engine. Vs-Machine mode
+/// still reports honestly that no AI opponent exists yet — that's a later
+/// phase — rather than pretending a match exists.
 class GameSetupScreen extends ConsumerStatefulWidget {
   const GameSetupScreen({super.key});
 
@@ -173,11 +176,7 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
                       AppSpacing.minTouchTarget + AppSpacing.md,
                     ),
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.engineNotReadyMessage)),
-                    );
-                  },
+                  onPressed: () => _startMatch(context, l10n),
                   child: Text(l10n.startMatchButton),
                 ),
               ],
@@ -186,5 +185,37 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
         ),
       ),
     );
+  }
+
+  void _startMatch(BuildContext context, AppLocalizations l10n) {
+    if (_mode == _MatchMode.vsMachine) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.machineNotReadyMessage)));
+      return;
+    }
+
+    final firstTurn = switch (_firstTurn) {
+      _FirstTurn.playerOne => Side.top,
+      _FirstTurn.playerTwo => Side.bottom,
+      _FirstTurn.random => Random().nextBool() ? Side.top : Side.bottom,
+    };
+
+    final playerOneName = _playerOneController.text.trim().isEmpty
+        ? l10n.firstTurnPlayerOne
+        : _playerOneController.text.trim();
+    final playerTwoName = _playerTwoController.text.trim().isEmpty
+        ? l10n.firstTurnPlayerTwo
+        : _playerTwoController.text.trim();
+
+    final config = MatchConfig(
+      playerOneName: playerOneName,
+      playerTwoName: playerTwoName,
+      playerOneSide: Side.top,
+      firstTurn: firstTurn,
+      timerMinutes: _timerMinutes,
+    );
+
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => MatchScreen(config: config)));
   }
 }

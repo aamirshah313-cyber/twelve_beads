@@ -91,6 +91,121 @@ class AppLocalizationsUr extends AppLocalizations {
       'میچ کا انجن ابھی تیار نہیں ہوا — یہ بعد کے مرحلے میں شامل کیا جائے گا۔ آپ کی ترتیبات محفوظ کر لی گئی ہیں۔';
 
   @override
+  String get machineNotReadyMessage =>
+      'کمپیوٹر حریف ابھی تیار نہیں ہوا — یہ بعد کے مرحلے میں شامل کیا جائے گا۔ آپ کی ترتیبات محفوظ کر لی گئی ہیں۔';
+
+  @override
+  String get matchScreenTitle => 'میچ';
+
+  @override
+  String turnBanner(String name) {
+    return '$name کی باری';
+  }
+
+  @override
+  String get forcedCaptureBanner => 'گوٹ مارنا ممکن ہے — آپ کو گوٹ مارنا ہوگی';
+
+  @override
+  String pieceNodeLabelOwn(String name) {
+    return '$name کی گوٹی';
+  }
+
+  @override
+  String get pieceNodeLabelEmpty => 'خالی جنکشن';
+
+  @override
+  String get pieceNodeLegalMove => '، جائز چال';
+
+  @override
+  String get pieceNodeLegalCapture => '، جائز گوٹ';
+
+  @override
+  String get pieceNodeSelected => '، منتخب';
+
+  @override
+  String get pieceNodeLastMove => '، پچھلی چال';
+
+  @override
+  String get pauseButton => 'روکیں';
+
+  @override
+  String get resumeButton => 'جاری رکھیں';
+
+  @override
+  String get restartButton => 'دوبارہ شروع کریں';
+
+  @override
+  String get resignButton => 'ہار مانیں';
+
+  @override
+  String get undoButton => 'واپس لیں';
+
+  @override
+  String get pausedOverlayTitle => 'رکا ہوا';
+
+  @override
+  String get pausedOverlayBody =>
+      'گھڑی رکی ہوئی ہے۔ جاری رکھنے کے لیے \'جاری رکھیں\' دبائیں۔';
+
+  @override
+  String get restartConfirmTitle => 'یہ میچ دوبارہ شروع کریں؟';
+
+  @override
+  String get restartConfirmBody =>
+      'موجودہ میچ فوری طور پر ختم ہو جائے گا اور نیا میچ شروع ہوگا۔ اسے واپس نہیں لایا جا سکتا۔';
+
+  @override
+  String get resignConfirmTitle => 'یہ میچ ہار مانیں؟';
+
+  @override
+  String resignConfirmBody(String name) {
+    return '$name فوری طور پر میچ ہار جائے گا۔';
+  }
+
+  @override
+  String get resignConfirmAction => 'ہار مانیں';
+
+  @override
+  String matchOverWinnerTitle(String name) {
+    return '$name جیت گیا';
+  }
+
+  @override
+  String get matchOverDrawTitle => 'برابر';
+
+  @override
+  String get matchOverReasonElimination =>
+      'حریف کی تمام گوٹیاں ماری جا چکی ہیں۔';
+
+  @override
+  String matchOverReasonNoLegalMoves(String name) {
+    return '$name کے پاس کوئی جائز چال نہیں تھی۔';
+  }
+
+  @override
+  String matchOverReasonResignation(String name) {
+    return '$name نے ہار مان لی۔';
+  }
+
+  @override
+  String matchOverReasonTimeout(String name) {
+    return '$name کا وقت ختم ہو گیا۔';
+  }
+
+  @override
+  String get matchOverReasonNoCaptureLimit =>
+      '40 باریوں تک کوئی گوٹ نہیں ماری گئی۔';
+
+  @override
+  String get matchOverNewMatchButton => 'نیا میچ';
+
+  @override
+  String get matchOverHomeButton => 'ہوم';
+
+  @override
+  String get timeUpMessage => 'وقت ختم';
+
+  @override
   String get rulesScreenTitle => 'کھیلنے کا طریقہ';
 
   @override

@@ -254,6 +254,198 @@ abstract class AppLocalizations {
   /// **'The match engine isn\'t built yet — that\'s a later phase. Your setup has been saved.'**
   String get engineNotReadyMessage;
 
+  /// No description provided for @machineNotReadyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The computer opponent isn\'t built yet — that\'s a later phase. Your setup has been saved.'**
+  String get machineNotReadyMessage;
+
+  /// No description provided for @matchScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Match'**
+  String get matchScreenTitle;
+
+  /// No description provided for @turnBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s turn'**
+  String turnBanner(String name);
+
+  /// No description provided for @forcedCaptureBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture available — you must capture'**
+  String get forcedCaptureBanner;
+
+  /// No description provided for @pieceNodeLabelOwn.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s bead'**
+  String pieceNodeLabelOwn(String name);
+
+  /// No description provided for @pieceNodeLabelEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty junction'**
+  String get pieceNodeLabelEmpty;
+
+  /// No description provided for @pieceNodeLegalMove.
+  ///
+  /// In en, this message translates to:
+  /// **', legal move'**
+  String get pieceNodeLegalMove;
+
+  /// No description provided for @pieceNodeLegalCapture.
+  ///
+  /// In en, this message translates to:
+  /// **', legal capture'**
+  String get pieceNodeLegalCapture;
+
+  /// No description provided for @pieceNodeSelected.
+  ///
+  /// In en, this message translates to:
+  /// **', selected'**
+  String get pieceNodeSelected;
+
+  /// No description provided for @pieceNodeLastMove.
+  ///
+  /// In en, this message translates to:
+  /// **', last move'**
+  String get pieceNodeLastMove;
+
+  /// No description provided for @pauseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get pauseButton;
+
+  /// No description provided for @resumeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get resumeButton;
+
+  /// No description provided for @restartButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get restartButton;
+
+  /// No description provided for @resignButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Resign'**
+  String get resignButton;
+
+  /// No description provided for @undoButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undoButton;
+
+  /// No description provided for @pausedOverlayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get pausedOverlayTitle;
+
+  /// No description provided for @pausedOverlayBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The clock is stopped. Tap Resume to continue.'**
+  String get pausedOverlayBody;
+
+  /// No description provided for @restartConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart this match?'**
+  String get restartConfirmTitle;
+
+  /// No description provided for @restartConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The current match will end immediately and a new one will start. This cannot be undone.'**
+  String get restartConfirmBody;
+
+  /// No description provided for @resignConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resign this match?'**
+  String get resignConfirmTitle;
+
+  /// No description provided for @resignConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} will lose the match immediately.'**
+  String resignConfirmBody(String name);
+
+  /// No description provided for @resignConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Resign'**
+  String get resignConfirmAction;
+
+  /// No description provided for @matchOverWinnerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} wins'**
+  String matchOverWinnerTitle(String name);
+
+  /// No description provided for @matchOverDrawTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw'**
+  String get matchOverDrawTitle;
+
+  /// No description provided for @matchOverReasonElimination.
+  ///
+  /// In en, this message translates to:
+  /// **'All opposing beads were captured.'**
+  String get matchOverReasonElimination;
+
+  /// No description provided for @matchOverReasonNoLegalMoves.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} had no legal move.'**
+  String matchOverReasonNoLegalMoves(String name);
+
+  /// No description provided for @matchOverReasonResignation.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} resigned.'**
+  String matchOverReasonResignation(String name);
+
+  /// No description provided for @matchOverReasonTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} ran out of time.'**
+  String matchOverReasonTimeout(String name);
+
+  /// No description provided for @matchOverReasonNoCaptureLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No capture was made in 40 turns.'**
+  String get matchOverReasonNoCaptureLimit;
+
+  /// No description provided for @matchOverNewMatchButton.
+  ///
+  /// In en, this message translates to:
+  /// **'New Match'**
+  String get matchOverNewMatchButton;
+
+  /// No description provided for @matchOverHomeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get matchOverHomeButton;
+
+  /// No description provided for @timeUpMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Time\'s up'**
+  String get timeUpMessage;
+
   /// No description provided for @rulesScreenTitle.
   ///
   /// In en, this message translates to:
