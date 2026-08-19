@@ -15,6 +15,7 @@ import '../application/move_presentation_controller.dart';
 import '../application/move_presentation_state.dart';
 import 'board_layout.dart';
 import 'board_painter.dart';
+import 'node_description.dart';
 
 /// Procedurally-drawn, accessibly hit-testable game board. Rendering comes
 /// from [BoardPainter] against the validated [BoardGraph]; every node also
@@ -70,10 +71,13 @@ class BoardWidget extends ConsumerWidget {
             : const <NodeId>{};
 
         final overlay = _computePresentationOverlay(presentation, layout);
+        final reducedMotion = resolveReducedMotion(settings.reducedMotion);
         final showTrail =
             overlay.animatingBeadPosition != null &&
-            !resolveReducedMotion(settings.reducedMotion) &&
+            !reducedMotion &&
             settings.visualQuality != VisualQuality.low;
+        final highQualityEffects =
+            settings.visualQuality == VisualQuality.high && !reducedMotion;
 
         final visual = BoardVisualState(
           graph: matchState.gameState.graph,
@@ -86,6 +90,8 @@ class BoardWidget extends ConsumerWidget {
           lastMoveSource: matchState.lastMoveSource,
           lastMoveDestination: matchState.lastMoveDestination,
           colorScheme: colorScheme,
+          highContrast: settings.highContrast,
+          highQualityEffects: highQualityEffects,
           presentationSourceNode: overlay.sourceNode,
           presentationDestinationNode: overlay.destinationNode,
           presentationCapturedNode: overlay.capturedNode,
@@ -96,7 +102,11 @@ class BoardWidget extends ConsumerWidget {
 
         return Stack(
           children: [
-            Positioned.fill(child: CustomPaint(painter: BoardPainter(visual))),
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: CustomPaint(painter: BoardPainter(visual)),
+              ),
+            ),
             IgnorePointer(
               ignoring: presentation.isPlaying || machineThinking,
               child: Stack(
@@ -239,6 +249,10 @@ class _NodeHitTarget extends StatelessWidget {
           ? l10n.pieceNodeLabelEmpty
           : l10n.pieceNodeLabelOwn(config.nameForSide(side)),
     );
+    // Position info so TalkBack can tell same-owner pieces apart, not just
+    // by swipe order (Phase 3 accessibility gap, closed in Phase 7).
+    buffer.write(', ');
+    buffer.write(describeNode(l10n, node));
     if (matchState.selectedNode == node) buffer.write(l10n.pieceNodeSelected);
     if (legalMoveTargets.contains(node)) buffer.write(l10n.pieceNodeLegalMove);
     if (legalCaptureTargets.contains(node)) {

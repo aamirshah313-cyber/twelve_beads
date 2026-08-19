@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/settings/settings_controller.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../game/board/board_graph.dart';
 import '../../../game/engine/game_state.dart';
 import '../../../game/engine/side.dart';
 import '../application/machine_controller.dart';
@@ -15,14 +15,7 @@ import '../application/move_presentation_controller.dart';
 import '../application/move_presentation_state.dart';
 import 'board_painter.dart';
 import 'board_widget.dart';
-
-/// Plain-language description of a node for screen readers — stable node
-/// IDs like `r1c2` are never exposed as raw technical copy.
-String describeNode(AppLocalizations l10n, NodeId nodeId) {
-  final row = int.parse(nodeId.substring(1, 2));
-  final col = int.parse(nodeId.substring(3, 4));
-  return l10n.nodePosition(row + 1, col + 1);
-}
+import 'node_description.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
   const MatchScreen({super.key, required this.config});
@@ -526,7 +519,7 @@ class _TurnBanner extends StatelessWidget {
   }
 }
 
-class _PlayerRail extends StatelessWidget {
+class _PlayerRail extends ConsumerWidget {
   const _PlayerRail({
     required this.config,
     required this.state,
@@ -540,7 +533,7 @@ class _PlayerRail extends StatelessWidget {
   final Axis axis;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
     final isActive =
         state.gameState.turn == side &&
@@ -548,16 +541,24 @@ class _PlayerRail extends StatelessWidget {
     final remaining = side == Side.top
         ? state.topRemaining
         : state.bottomRemaining;
-    final beadColor = side == Side.top ? topBeadColor : bottomBeadColor;
+    final highContrast = ref.watch(settingsControllerProvider).highContrast;
+    final beadColor = effectiveBeadColor(
+      side,
+      highContrast: highContrast,
+      brightness: Theme.of(context).colorScheme.brightness,
+    );
 
     final children = <Widget>[
       CircleAvatar(radius: 10, backgroundColor: beadColor),
       const SizedBox(width: AppSpacing.sm, height: AppSpacing.sm),
-      Text(
-        config.nameForSide(side),
-        style: isActive
-            ? textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
-            : textTheme.titleMedium,
+      Flexible(
+        child: Text(
+          config.nameForSide(side),
+          overflow: TextOverflow.ellipsis,
+          style: isActive
+              ? textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+              : textTheme.titleMedium,
+        ),
       ),
       if (state.config.timerEnabled) ...[
         const SizedBox(width: AppSpacing.md, height: AppSpacing.xs),

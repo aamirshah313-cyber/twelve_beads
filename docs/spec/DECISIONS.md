@@ -147,3 +147,64 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
     modify other providers during their initialization"). Fixed the same
     way Phase 5's `MachineController` handles its analogous initial-turn
     check: defer the cross-provider write by one `Future.microtask()`.
+- Phase 7 scope notes (polish and accessibility):
+  - Closed the Phase 3 accessibility gap: board node semantic labels now
+    include position (`describeNode`/`nodePosition`, moved to a shared
+    `node_description.dart` so both the board's own hit-target labels
+    and the move-announcement code use the exact same phrasing) — a
+    TalkBack user can now tell same-owner pieces apart by label alone,
+    not just swipe order.
+  - Closed the Phase 4 "High visual-quality tier == Standard" gap with a
+    single, deliberately restrained addition (a soft blurred glow behind
+    the captured-piece marker during capture playback), gated on
+    `VisualQuality.high` and skipped under reduced motion. No general
+    particle system was built: this project has no profiling
+    infrastructure, and 04-ui-ux-and-visual-system.md explicitly gates
+    richer High-tier effects on "after profiling" — so High stays
+    intentionally conservative rather than adding unverified-cost
+    effects. Low vs. Standard were already differentiated in Phase 4
+    (crisp/near-instant timing, no trail); that didn't change here.
+  - Fixed a real defect: `AppSettings.highContrast` boosted the Material
+    3 `ColorScheme`'s contrast level (background/edges/rings, which read
+    `colorScheme` directly) but had **zero effect on the beads
+    themselves**, since they used hardcoded thematic colors
+    (`topBeadColor`/`bottomBeadColor`) applied directly rather than
+    through the color scheme. Added `effectiveBeadColor()`
+    (`board_painter.dart`): under high contrast, the same thematic hue
+    is saturation-boosted and pushed away from mid-lightness (darker on
+    a light theme, lighter on a dark one) rather than switched to a
+    theme accent color — this keeps the bead hue distinct from the
+    board's own functional overlay colors (selection rings, forced-
+    capture rings, last-move markers all already use
+    primary/secondary/tertiary/error), so a high-contrast bead can never
+    be confused with one of those cues.
+  - RTL: the surrounding UI (text, `Row`/`Column` layout, `Directionality`)
+    already mirrors correctly via Flutter's built-in RTL support — no
+    code changes were needed there beyond one real bug: the home
+    screen's menu buttons used physical `Alignment.centerLeft` for their
+    icon+label content, which stayed left-aligned even in Urdu. Fixed to
+    `AlignmentDirectional.centerStart`. The board grid itself
+    (`board_layout.dart`) is a **deliberate exception**: it does not
+    mirror in RTL. A board's spatial layout is functional, not textual —
+    "top"/"bottom" already encode the two sides per the game's own
+    rules, and two people sharing one device in local pass-and-play
+    expect the physical board geometry to stay fixed regardless of the
+    active display language, the same way a chess or checkers board
+    doesn't rotate for an RTL locale.
+  - Performance: `BoardPainter.shouldRepaint` previously always returned
+    `true` (an unconditional full repaint on every rebuild, including
+    every 60fps-ish tick of the presentation timeline's travel
+    animation). Replaced with a real diff across every field that
+    affects paint output (pieces, selection, legal/forced-capture sets,
+    last-move markers, the full presentation overlay, color scheme,
+    high-contrast/high-quality-effects flags) — `layout`/`graph` are
+    deliberately excluded since a board resize already repaints
+    independently of this delegate check (confirmed against
+    `RenderCustomPaint`'s own doc comment), and `graph` never changes
+    mid-match. Also wrapped the board's `CustomPaint` in a
+    `RepaintBoundary` so its (now-cheaper) repaints don't force
+    surrounding widgets (turn banner, player rails) to repaint too.
+  - Also fixed, while auditing the player rail: a long localized player
+    name at a large text-scale factor could overflow the `Row` (no
+    `Flexible`/ellipsis previously) — wrapped the name in
+    `Flexible(overflow: TextOverflow.ellipsis)`.

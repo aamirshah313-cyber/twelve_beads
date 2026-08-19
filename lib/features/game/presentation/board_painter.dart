@@ -12,6 +12,30 @@ import 'board_layout.dart';
 const topBeadColor = Color(0xFFE07A2C);
 const bottomBeadColor = Color(0xFF3F9D52);
 
+/// The bead color actually used to paint the board. Under the high-contrast
+/// setting, the same thematic hue is boosted in saturation and pushed away
+/// from mid-lightness (darker on a light theme, lighter on a dark one) so
+/// beads read clearly against the board background — otherwise
+/// `AppSettings.highContrast` had no visible effect on the board's most
+/// important elements (Phase 7 fix; the theme-level contrast boost already
+/// applied to `ColorScheme.fromSeed` only reached the background/edges,
+/// which read `colorScheme` directly, not the hardcoded bead colors).
+Color effectiveBeadColor(
+  Side side, {
+  required bool highContrast,
+  required Brightness brightness,
+}) {
+  final base = side == Side.top ? topBeadColor : bottomBeadColor;
+  if (!highContrast) return base;
+
+  final hsl = HSLColor.fromColor(base);
+  final saturated = hsl.withSaturation((hsl.saturation + 0.25).clamp(0.0, 1.0));
+  final targetLightness = brightness == Brightness.dark
+      ? (saturated.lightness + 0.18).clamp(0.0, 1.0)
+      : (saturated.lightness - 0.18).clamp(0.0, 1.0);
+  return saturated.withLightness(targetLightness).toColor();
+}
+
 /// Everything the board painter needs to draw one frame. Built fresh from
 /// [MatchUiState] on every rebuild — the painter itself holds no state and
 /// never mutates or infers game rules.
@@ -26,6 +50,7 @@ class BoardVisualState {
   final NodeId? lastMoveSource;
   final NodeId? lastMoveDestination;
   final ColorScheme colorScheme;
+  final bool highContrast;
 
   // Opponent-move presentation timeline overlay (Phase 4). All optional:
   // null/empty when no move is currently animating.
@@ -35,6 +60,15 @@ class BoardVisualState {
   final Side? animatingBeadSide;
   final Offset? animatingBeadPosition;
   final bool showTrail;
+
+  /// High visual-quality tier only (and never under reduced motion): adds a
+  /// single restrained soft-glow behind the captured-piece marker. This is
+  /// deliberately minimal — one extra blurred circle, no particle system —
+  /// per 04-ui-ux-and-visual-system.md's "High may add restrained particles
+  /// only after profiling": a real profiling setup doesn't exist in this
+  /// project, so High stays intentionally conservative rather than
+  /// unverified-expensive. See docs/spec/DECISIONS.md.
+  final bool highQualityEffects;
 
   const BoardVisualState({
     required this.graph,
@@ -47,6 +81,8 @@ class BoardVisualState {
     required this.lastMoveSource,
     required this.lastMoveDestination,
     required this.colorScheme,
+    this.highContrast = false,
+    this.highQualityEffects = false,
     this.presentationSourceNode,
     this.presentationDestinationNode,
     this.presentationCapturedNode,
@@ -121,7 +157,11 @@ class BoardPainter extends CustomPainter {
       }
 
       final fillPaint = Paint()
-        ..color = side == Side.top ? topBeadColor : bottomBeadColor;
+        ..color = effectiveBeadColor(
+          side,
+          highContrast: visual.highContrast,
+          brightness: visual.colorScheme.brightness,
+        );
       final borderPaint = Paint()
         ..color = Colors.black.withValues(alpha: 0.25)
         ..strokeWidth = 1.5
@@ -273,6 +313,16 @@ class BoardPainter extends CustomPainter {
     if (captured != null) {
       final center = visual.layout.positions[captured];
       if (center != null) {
+        if (visual.highQualityEffects) {
+          final glowPaint = Paint()
+            ..color = visual.colorScheme.error.withValues(alpha: 0.35)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+          canvas.drawCircle(
+            center,
+            visual.layout.nodeSpacing * 0.34,
+            glowPaint,
+          );
+        }
         final crossPaint = Paint()
           ..color = visual.colorScheme.error
           ..strokeWidth = 3
@@ -321,7 +371,11 @@ class BoardPainter extends CustomPainter {
 
     final pieceRadius = visual.layout.nodeSpacing * 0.32;
     final fillPaint = Paint()
-      ..color = side == Side.top ? topBeadColor : bottomBeadColor;
+      ..color = effectiveBeadColor(
+        side,
+        highContrast: visual.highContrast,
+        brightness: visual.colorScheme.brightness,
+      );
     final borderPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.25)
       ..strokeWidth = 1.5
@@ -337,5 +391,44 @@ class BoardPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant BoardPainter oldDelegate) => true;
+  bool shouldRepaint(covariant BoardPainter oldDelegate) {
+    final a = oldDelegate.visual;
+    final b = visual;
+    if (identical(a, b)) return false;
+    // `layout`/`graph` are deliberately not compared: a resize is already
+    // repainted independently of this delegate check (RenderCustomPaint
+    // repaints on a box size change regardless of shouldRepaint), and
+    // `graph` never changes mid-match.
+    return a.selectedNode != b.selectedNode ||
+        a.lastMoveSource != b.lastMoveSource ||
+        a.lastMoveDestination != b.lastMoveDestination ||
+        a.colorScheme != b.colorScheme ||
+        a.highContrast != b.highContrast ||
+        a.highQualityEffects != b.highQualityEffects ||
+        a.presentationSourceNode != b.presentationSourceNode ||
+        a.presentationDestinationNode != b.presentationDestinationNode ||
+        a.presentationCapturedNode != b.presentationCapturedNode ||
+        a.animatingBeadSide != b.animatingBeadSide ||
+        a.animatingBeadPosition != b.animatingBeadPosition ||
+        a.showTrail != b.showTrail ||
+        !_mapEquals(a.pieces, b.pieces) ||
+        !_setEquals(a.legalMoveTargets, b.legalMoveTargets) ||
+        !_setEquals(a.legalCaptureTargets, b.legalCaptureTargets) ||
+        !_setEquals(a.forcedCaptureSources, b.forcedCaptureSources);
+  }
+}
+
+bool _mapEquals(Map<NodeId, Side> a, Map<NodeId, Side> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (final entry in a.entries) {
+    if (b[entry.key] != entry.value) return false;
+  }
+  return true;
+}
+
+bool _setEquals(Set<NodeId> a, Set<NodeId> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  return a.containsAll(b);
 }

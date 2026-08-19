@@ -174,7 +174,7 @@ class _HomeMenuButton extends StatelessWidget {
         minimumSize: const Size.fromHeight(
           AppSpacing.minTouchTarget + AppSpacing.md,
         ),
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       ),
       onPressed: () => Navigator.of(context).pushNamed(routeName),

@@ -7,6 +7,7 @@ import 'package:twelve_beads/core/profile/profile_controller.dart';
 import 'package:twelve_beads/core/settings/settings_controller.dart';
 import 'package:twelve_beads/features/game/application/match_config.dart';
 import 'package:twelve_beads/features/game/application/saved_game_controller.dart';
+import 'package:twelve_beads/features/game/presentation/board_painter.dart';
 import 'package:twelve_beads/features/game/presentation/board_widget.dart';
 import 'package:twelve_beads/features/game/presentation/match_screen.dart';
 import 'package:twelve_beads/game/ai/difficulty.dart';
@@ -231,4 +232,65 @@ void main() {
       expect(find.text("Alice's turn"), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'a board node semantic label includes its position, not just its owner '
+    '(Phase 7 accessibility fix)',
+    (tester) async {
+      await tester.pumpWidget(await _app());
+      await tester.pumpAndSettle();
+
+      final label = tester
+          .getSemantics(find.byType(BoardWidget).first)
+          .toStringDeep();
+      // r1c2 (row 2, column 3, 1-indexed) holds a top bead at the start.
+      expect(label, contains('row 2, column 3'));
+    },
+  );
+
+  testWidgets(
+    'the match screen renders without overflow under a large text scale '
+    'factor',
+    (tester) async {
+      await tester.pumpWidget(await _app());
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('high contrast changes the bead fill color used for painting', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await _app());
+    await tester.pumpAndSettle();
+
+    Color currentTopBeadColor() {
+      final painter = tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((w) => w.painter)
+          .whereType<BoardPainter>()
+          .first;
+      return effectiveBeadColor(
+        Side.top,
+        highContrast: painter.visual.highContrast,
+        brightness: Brightness.light,
+      );
+    }
+
+    final before = currentTopBeadColor();
+
+    final context = tester.element(find.byType(MatchScreen));
+    ProviderScope.containerOf(context)
+        .read(settingsControllerProvider.notifier)
+        .setHighContrast(true);
+    await tester.pumpAndSettle();
+
+    final after = currentTopBeadColor();
+    expect(after, isNot(before));
+  });
 }
