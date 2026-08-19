@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/history/match_history_controller.dart';
+import 'core/history/match_history_repository.dart';
 import 'core/l10n/gen/app_localizations.dart';
 import 'core/profile/profile_controller.dart';
 import 'core/profile/profile_repository.dart';
@@ -11,6 +13,8 @@ import 'core/settings/app_settings.dart';
 import 'core/settings/settings_controller.dart';
 import 'core/settings/settings_repository.dart';
 import 'core/theme/app_theme.dart';
+import 'features/game/application/saved_game_controller.dart';
+import 'features/game/application/saved_game_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +22,8 @@ Future<void> main() async {
   final deviceLanguageCode = ui.PlatformDispatcher.instance.locale.languageCode;
   final settingsRepository = await SettingsRepository.create();
   final profileRepository = await ProfileRepository.create();
+  final matchHistoryRepository = await MatchHistoryRepository.create();
+  final savedGameRepository = await SavedGameRepository.create();
 
   runApp(
     ProviderScope(
@@ -25,6 +31,10 @@ Future<void> main() async {
         deviceLanguageCodeProvider.overrideWithValue(deviceLanguageCode),
         settingsRepositoryProvider.overrideWithValue(settingsRepository),
         profileRepositoryProvider.overrideWithValue(profileRepository),
+        matchHistoryRepositoryProvider.overrideWithValue(
+          matchHistoryRepository,
+        ),
+        savedGameRepositoryProvider.overrideWithValue(savedGameRepository),
       ],
       child: const TwelveBeadsApp(),
     ),

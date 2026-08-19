@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/history/match_history_controller.dart';
+import '../../../core/history/match_record.dart';
+import '../../../core/profile/profile_controller.dart';
 import '../../../game/board/board_graph.dart';
 import '../../../game/engine/game_action.dart';
 import '../../../game/engine/game_state.dart';
@@ -10,6 +13,8 @@ import '../../../game/engine/side.dart';
 import 'game_clock.dart';
 import 'match_config.dart';
 import 'move_presentation_controller.dart';
+import 'saved_game.dart';
+import 'saved_game_controller.dart';
 
 /// Immutable UI-facing snapshot of a local match in progress.
 class MatchUiState {
@@ -95,6 +100,8 @@ class MatchController extends Notifier<MatchUiState> {
   Side? _armedSide;
   late final String _matchId;
   int _actionSequence = 0;
+  late DateTime _startedAt;
+  bool _finalized = false;
 
   GameClock get _clock => ref.read(gameClockProvider);
 
@@ -103,8 +110,52 @@ class MatchController extends Notifier<MatchUiState> {
     _matchId =
         'local-${identityHashCode(config)}-${DateTime.now().microsecondsSinceEpoch}';
     ref.onDispose(() => _timer?.cancel());
-    final initial = MatchUiState.initial(config);
-    if (initial.config.timerEnabled) {
+
+    final pending = ref.read(pendingResumeSnapshotProvider);
+    final MatchUiState initial;
+    if (pending != null && identical(pending.config, config)) {
+      // Consume the hand-off once — a second MatchController build for the
+      // same config (e.g. after a hot restart of the widget tree) must not
+      // re-hydrate from a now-stale snapshot. Providers can't modify each
+      // other synchronously during build(), so this is deferred by one
+      // microtask (same pattern as MachineController's initial-turn check).
+      Future.microtask(() {
+        if (ref.exists(pendingResumeSnapshotProvider)) {
+          ref.read(pendingResumeSnapshotProvider.notifier).set(null);
+        }
+      });
+      _startedAt = pending.startedAt;
+      final rebuilt = replay(
+        ruleset: config.ruleset,
+        firstTurn: config.firstTurn,
+        actions: pending.actionLog,
+        matchId: _matchId,
+      );
+      _actionSequence = pending.actionLog.length;
+      initial = MatchUiState(
+        config: config,
+        gameState: rebuilt,
+        actionLog: pending.actionLog,
+        selectedNode: null,
+        lastMoveSource: pending.actionLog.isEmpty
+            ? null
+            : _sourceOf(pending.actionLog.last),
+        lastMoveDestination: pending.actionLog.isEmpty
+            ? null
+            : _destinationOf(pending.actionLog.last),
+        topRemaining: pending.topRemaining,
+        bottomRemaining: pending.bottomRemaining,
+        // Land paused: the player must explicitly resume for the clock (and
+        // the machine, if any) to start, rather than either silently
+        // running in the background.
+        isPaused: true,
+      );
+    } else {
+      _startedAt = _clock.now();
+      initial = MatchUiState.initial(config);
+    }
+
+    if (initial.config.timerEnabled && !initial.isPaused) {
       _armClock(initial.gameState.turn);
       // Can't call _startTimer() here: it reads `state`, which isn't set
       // until this build() call returns. Start the periodic timer directly.
@@ -195,6 +246,13 @@ class MatchController extends Notifier<MatchUiState> {
       _armClock(rebuilt.turn);
       _startTimer();
     }
+    if (newLog.isEmpty) {
+      // Undoing back to the very start leaves nothing worth resuming —
+      // clear any stale saved snapshot rather than leaving it out of sync.
+      ref.read(savedGameControllerProvider.notifier).clear();
+    } else {
+      _autosave();
+    }
   }
 
   void pause() {
@@ -203,6 +261,7 @@ class MatchController extends Notifier<MatchUiState> {
     _freezeClocksIntoState();
     _cancelTimer();
     state = _withPaused(true);
+    _autosave();
   }
 
   void resume() {
@@ -218,6 +277,9 @@ class MatchController extends Notifier<MatchUiState> {
     _armedAt = null;
     _armedSide = null;
     _actionSequence = 0;
+    _finalized = false;
+    _startedAt = _clock.now();
+    ref.read(savedGameControllerProvider.notifier).clear();
     final fresh = MatchUiState.initial(state.config);
     state = fresh;
     if (fresh.config.timerEnabled) {
@@ -270,6 +332,9 @@ class MatchController extends Notifier<MatchUiState> {
     }
     if (outcome.state.phase == GamePhase.finished) {
       ref.read(hapticsPortProvider).matchEnd();
+      _finalizeMatch(outcome.state);
+    } else {
+      _autosave();
     }
   }
 
@@ -277,6 +342,80 @@ class MatchController extends Notifier<MatchUiState> {
     ref
         .read(movePresentationControllerProvider(config).notifier)
         .cancelAndSnapToFinal();
+  }
+
+  /// Persists the current in-progress match so it can be offered as
+  /// "Resume" on next launch. Never called for a still-empty match (nothing
+  /// to resume) or a finished one (`_finalizeMatch` clears it instead) —
+  /// per "avoid saving a game after it is already terminal".
+  void _autosave() {
+    if (state.gameState.phase != GamePhase.playing) return;
+    if (state.actionLog.isEmpty) return;
+    ref
+        .read(savedGameControllerProvider.notifier)
+        .save(
+          SavedGameSnapshot(
+            config: config,
+            actionLog: state.actionLog,
+            topRemaining: state.topRemaining,
+            bottomRemaining: state.bottomRemaining,
+            startedAt: _startedAt,
+            savedAt: _clock.now(),
+          ),
+        );
+  }
+
+  /// Folds a just-finished match's result into local match history and the
+  /// profile's aggregate stats/badges (Phase 6), and clears any saved
+  /// resumable snapshot. Runs exactly once per match instance: reachable
+  /// only from [_applyAndUpdate] the single time `phase` turns
+  /// [GamePhase.finished], since no further action can apply afterward.
+  void _finalizeMatch(GameState finalState) {
+    if (_finalized) return;
+    _finalized = true;
+
+    ref.read(savedGameControllerProvider.notifier).clear();
+
+    final ownSide = config.playerOneSide;
+    final events = replayWithEvents(
+      ruleset: config.ruleset,
+      firstTurn: config.firstTurn,
+      actions: state.actionLog,
+    ).events;
+    final ownCaptures = events
+        .where((event) => event.actor == ownSide)
+        .fold<int>(0, (sum, event) => sum + event.capturedNodes.length);
+
+    final outcome = matchOutcomeFor(finalState, ownSide);
+    final now = _clock.now();
+
+    ref
+        .read(matchHistoryControllerProvider.notifier)
+        .addRecord(
+          MatchRecord(
+            id: 'match-${now.microsecondsSinceEpoch}',
+            startedAt: _startedAt,
+            endedAt: now,
+            mode: config.isVsMachine
+                ? MatchMode.vsMachine
+                : MatchMode.twoPlayer,
+            difficulty: config.isVsMachine ? config.difficulty : null,
+            playerOneName: config.playerOneName,
+            playerTwoName: config.playerTwoName,
+            outcome: outcome,
+            winReason: finalState.winReason,
+            moveCount: state.actionLog.length,
+            ownCaptures: ownCaptures,
+          ),
+        );
+
+    ref
+        .read(profileControllerProvider.notifier)
+        .applyFinalizedMatch(
+          outcome: outcome,
+          capturesGained: ownCaptures,
+          moveCount: state.actionLog.length,
+        );
   }
 
   MatchUiState _withSelection(NodeId? node) => MatchUiState(

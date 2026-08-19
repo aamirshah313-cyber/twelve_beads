@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/history/match_history_controller.dart';
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/profile/profile_controller.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/settings_controller.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../game/application/saved_game_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -196,5 +198,7 @@ class SettingsScreen extends ConsumerWidget {
         .read(settingsControllerProvider.notifier)
         .deleteAllAndReset(deviceLanguageCode: deviceLanguageCode);
     await ref.read(profileControllerProvider.notifier).deleteAllAndReset();
+    await ref.read(matchHistoryControllerProvider.notifier).deleteAllAndReset();
+    ref.read(savedGameControllerProvider.notifier).clear();
   }
 }

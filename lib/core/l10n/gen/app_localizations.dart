@@ -608,6 +608,150 @@ abstract class AppLocalizations {
   /// **'No matches played yet'**
   String get profileNoMatchesYet;
 
+  /// No description provided for @profileHistoryHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent matches'**
+  String get profileHistoryHeading;
+
+  /// No description provided for @badgeFirstWinName.
+  ///
+  /// In en, this message translates to:
+  /// **'First Win'**
+  String get badgeFirstWinName;
+
+  /// No description provided for @badgeFirstWinDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Win your first match.'**
+  String get badgeFirstWinDescription;
+
+  /// No description provided for @badgeFiveMatchesName.
+  ///
+  /// In en, this message translates to:
+  /// **'Five Matches'**
+  String get badgeFiveMatchesName;
+
+  /// No description provided for @badgeFiveMatchesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Play five matches.'**
+  String get badgeFiveMatchesDescription;
+
+  /// No description provided for @badgeCaptureSpecialistName.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture Specialist'**
+  String get badgeCaptureSpecialistName;
+
+  /// No description provided for @badgeCaptureSpecialistDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture 5 beads in a single match.'**
+  String get badgeCaptureSpecialistDescription;
+
+  /// No description provided for @badgeThreeWinStreakName.
+  ///
+  /// In en, this message translates to:
+  /// **'Three-Win Streak'**
+  String get badgeThreeWinStreakName;
+
+  /// No description provided for @badgeThreeWinStreakDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Win three matches in a row.'**
+  String get badgeThreeWinStreakDescription;
+
+  /// No description provided for @badgeFastFinishName.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast Finish'**
+  String get badgeFastFinishName;
+
+  /// No description provided for @badgeFastFinishDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Win a match in 12 moves or fewer.'**
+  String get badgeFastFinishDescription;
+
+  /// No description provided for @badgePatientPlayerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient Player'**
+  String get badgePatientPlayerName;
+
+  /// No description provided for @badgePatientPlayerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a match that lasts 60 moves or more.'**
+  String get badgePatientPlayerDescription;
+
+  /// No description provided for @historyOutcomeWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Won'**
+  String get historyOutcomeWin;
+
+  /// No description provided for @historyOutcomeLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost'**
+  String get historyOutcomeLoss;
+
+  /// No description provided for @historyOutcomeDraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw'**
+  String get historyOutcomeDraw;
+
+  /// No description provided for @historyOpponentMachine.
+  ///
+  /// In en, this message translates to:
+  /// **'vs Machine ({difficulty})'**
+  String historyOpponentMachine(String difficulty);
+
+  /// No description provided for @historyOpponentPlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'vs {name}'**
+  String historyOpponentPlayer(String name);
+
+  /// No description provided for @historyMoveCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} moves'**
+  String historyMoveCount(int count);
+
+  /// No description provided for @resumeMatchAvailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You have a match in progress'**
+  String get resumeMatchAvailableTitle;
+
+  /// No description provided for @resumeMatchButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get resumeMatchButton;
+
+  /// No description provided for @discardMatchButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get discardMatchButton;
+
+  /// No description provided for @discardMatchConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard this match?'**
+  String get discardMatchConfirmTitle;
+
+  /// No description provided for @discardMatchConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The in-progress match will be permanently discarded. This cannot be undone.'**
+  String get discardMatchConfirmBody;
+
   /// No description provided for @settingsScreenTitle.
   ///
   /// In en, this message translates to:
@@ -713,7 +857,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteConfirmBody.
   ///
   /// In en, this message translates to:
-  /// **'This permanently removes your settings, profiles and match history from this device. This cannot be undone.'**
+  /// **'This permanently removes your settings, profile, badges, match history and any in-progress match from this device. This cannot be undone.'**
   String get settingsDeleteConfirmBody;
 
   /// No description provided for @commonOn.

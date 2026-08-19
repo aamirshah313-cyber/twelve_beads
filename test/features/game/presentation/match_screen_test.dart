@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:twelve_beads/core/history/match_history_controller.dart';
 import 'package:twelve_beads/core/l10n/gen/app_localizations.dart';
+import 'package:twelve_beads/core/profile/profile_controller.dart';
 import 'package:twelve_beads/core/settings/settings_controller.dart';
-import 'package:twelve_beads/core/settings/settings_repository.dart';
 import 'package:twelve_beads/features/game/application/match_config.dart';
+import 'package:twelve_beads/features/game/application/saved_game_controller.dart';
 import 'package:twelve_beads/features/game/presentation/board_widget.dart';
 import 'package:twelve_beads/features/game/presentation/match_screen.dart';
 import 'package:twelve_beads/game/ai/difficulty.dart';
 import 'package:twelve_beads/game/board/board_graph.dart';
 import 'package:twelve_beads/features/game/presentation/board_layout.dart';
 import 'package:twelve_beads/game/engine/side.dart';
+
+import '../../../support/repository_overrides.dart';
 
 MatchConfig _config() => const MatchConfig(
   playerOneName: 'Alice',
@@ -48,12 +51,14 @@ Future<void> _tapNode(WidgetTester tester, NodeId node) async {
 }
 
 Future<Widget> _app({MatchConfig? config}) async {
-  SharedPreferences.setMockInitialValues({});
-  final settingsRepository = await SettingsRepository.create();
+  final repos = await createTestRepositories();
   return ProviderScope(
     overrides: [
-      settingsRepositoryProvider.overrideWithValue(settingsRepository),
+      settingsRepositoryProvider.overrideWithValue(repos.settings),
       deviceLanguageCodeProvider.overrideWithValue('en'),
+      profileRepositoryProvider.overrideWithValue(repos.profile),
+      matchHistoryRepositoryProvider.overrideWithValue(repos.matchHistory),
+      savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

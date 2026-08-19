@@ -18,6 +18,7 @@ currently open, but every default below is easy to override on request.
 | D-007 | Repetition / draw handling | Resolved as an engineering safeguard rather than a traditional rule: `Ruleset.classicAlquerque.noCaptureMoveLimitForDraw = 40` plies without a capture ends the match in a draw, guaranteeing termination. No repetition-of-position detection is implemented in Phase 2. | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
 | D-008 | Win threshold | Resolved by default: `Ruleset.classicAlquerque.stalemateIsLossForPlayerToMove = true` — a side wins either by eliminating all opposing pieces, or by leaving the opponent with zero legal actions on their turn (stalemate counts as a loss for the player to move, not a draw). | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
 | D-009 | Undo policy | Resolved as a product default (UI-layer, enforced in Phase 3): undo is available in local two-player mode only, limited to the single most recently completed action, and disabled entirely while a capture chain is in progress (the whole chain-so-far must complete before any undo is offered). Not offered in vs.-Machine mode after the machine has moved. The Phase 2 engine itself has no undo concept — this is achieved by replaying the action log minus its last entry. | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
+| D-010 | "Current streak" semantics | Resolved as a product default (Phase 6): `ProfileStats.currentStreak` counts only consecutive **wins** — it increments on a win and resets to 0 on any loss or draw. A separate signed win/loss streak was considered and rejected as more confusing for the plain "Current streak" stat label without further UI decoration. | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
 
 All of D-003 through D-009 are implemented as the single named `Ruleset.classicAlquerque` in `lib/game/engine/ruleset.dart` — a default chosen because this board's confirmed 12-a-side, empty-center layout (D-002) already places it in the traditional Alquerque family, not a claim that this exact rule combination has been verified against a specific regional source. Every one of these remains easy to override: add a new named `Ruleset` and switch `GameState.initial(ruleset: ...)` — no engine changes required. Flag any of these to Claude at any time to adjust or replace with a different named variant.
 
@@ -97,3 +98,52 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
     special-cased anywhere in the match/board widgets — `nameForSide()`
     and everything built on it (turn banner, player rail, dialogs,
     announcements) needed no changes to support vs-Machine matches.
+- Phase 6 scope notes:
+  - Persistence uses versioned `SharedPreferences` + JSON (matching the
+    pattern already established for `Settings`/`Profile` in Phase 1),
+    not Drift/SQLite as suggested as an example in
+    03-architecture-and-data.md. Given this app's modest local data
+    volumes (one profile, a capped match-history list, a single
+    resumable game) and no cross-entity querying needs, a heavier
+    embedded-SQL dependency wasn't judged worth its build-complexity
+    cost (native bindings, codegen). Each repository still follows the
+    spec's required shape: a stable storage key with a `.v1` schema
+    suffix, corruption recovery (malformed data is discarded and
+    recovered to a safe default — for match history, per-entry, not the
+    whole list), and a `deleteAll()`/"delete local data" path.
+  - All aggregate stats, badges and match history are tracked from
+    `MatchConfig.playerOneSide`'s perspective only — this app has a
+    single local profile (Phase 1), so "the profile's own side" is
+    always Player 1, whether the match is two-player pass-and-play or
+    vs-Machine. There is no per-profile-selection or multi-profile
+    support in this phase.
+  - `MatchRecord` (match history) stores only summary fields (outcome,
+    win reason, move count, own captures, mode/difficulty, timestamps)
+    — not the full action log. Full deterministic replay-from-history is
+    out of scope for Phase 6; the engine's `replay`/`replayWithEvents`
+    (Phase 2) remain the mechanism actually used for undo and for
+    autosave/resume (see next point), so nothing about the "action log
+    is the one authoritative replay source" principle is violated by
+    history being summary-only.
+  - The "SavedGame" resumable-match feature persists exactly one slot
+    (the spec's schema table lists `SavedGame` as a single row, not a
+    list) — starting a new match or restarting silently discards any
+    previous in-progress one. A resumed match always lands **paused**
+    (never auto-resumes the clock or, for vs-Machine, the opponent) so
+    the player must explicitly continue. Autosave writes happen after
+    every move/undo and on pause, not on every clock tick, to keep
+    persistence I/O infrequent; a match is never saved once finished
+    (`_finalizeMatch` clears any saved snapshot first) and never saved
+    before its first move (nothing to resume).
+  - Badge thresholds (5 captures for Capture Specialist, ≤12 moves for
+    Fast Finish, ≥60 moves for Patient Player) are sensible chosen
+    defaults, like the existing 40-turn no-capture draw limit — not
+    derived from any specified source. Easy to retune in
+    `lib/core/profile/badges.dart` on request.
+  - A real cross-cutting bug was caught by testing here: `MatchController
+    .build()` initially tried to synchronously clear the one-shot
+    `pendingResumeSnapshotProvider` hand-off during its own `build()`,
+    which Riverpod explicitly disallows ("providers are not allowed to
+    modify other providers during their initialization"). Fixed the same
+    way Phase 5's `MachineController` handles its analogous initial-turn
+    check: defer the cross-provider write by one `Future.microtask()`.

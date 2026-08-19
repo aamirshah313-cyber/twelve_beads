@@ -2,21 +2,24 @@ import 'package:clock/clock.dart' as pkg_clock;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:twelve_beads/core/history/match_history_controller.dart';
+import 'package:twelve_beads/core/profile/profile_controller.dart';
 import 'package:twelve_beads/core/settings/app_settings.dart';
 import 'package:twelve_beads/core/settings/settings_controller.dart';
-import 'package:twelve_beads/core/settings/settings_repository.dart';
 import 'package:twelve_beads/features/game/application/game_clock.dart';
 import 'package:twelve_beads/features/game/application/haptics_port.dart';
 import 'package:twelve_beads/features/game/application/machine_controller.dart';
 import 'package:twelve_beads/features/game/application/match_config.dart';
 import 'package:twelve_beads/features/game/application/match_controller.dart';
 import 'package:twelve_beads/features/game/application/move_presentation_controller.dart';
+import 'package:twelve_beads/features/game/application/saved_game_controller.dart';
 import 'package:twelve_beads/game/ai/difficulty.dart';
 import 'package:twelve_beads/game/engine/game_action.dart';
 import 'package:twelve_beads/game/engine/game_state.dart';
 import 'package:twelve_beads/game/engine/rules_engine.dart';
 import 'package:twelve_beads/game/engine/side.dart';
+
+import '../../../support/repository_overrides.dart';
 
 class _AdapterClock implements GameClock {
   _AdapterClock(this._clock);
@@ -34,11 +37,6 @@ class _NoopHapticsPort implements HapticsPort {
   void capture() {}
   @override
   void matchEnd() {}
-}
-
-Future<SettingsRepository> _createSettingsRepository() async {
-  SharedPreferences.setMockInitialValues({});
-  return SettingsRepository.create();
 }
 
 MatchConfig _vsMachineConfig({
@@ -71,10 +69,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('MachineController', () {
-    late SettingsRepository settingsRepository;
+    late TestRepositories repos;
 
     setUp(() async {
-      settingsRepository = await _createSettingsRepository();
+      repos = await createTestRepositories();
     });
 
     test(
@@ -93,9 +91,14 @@ void main() {
               gameClockProvider.overrideWithValue(
                 _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
               ),
-              settingsRepositoryProvider.overrideWithValue(settingsRepository),
+              settingsRepositoryProvider.overrideWithValue(repos.settings),
               deviceLanguageCodeProvider.overrideWithValue('en'),
               hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+              profileRepositoryProvider.overrideWithValue(repos.profile),
+              matchHistoryRepositoryProvider.overrideWithValue(
+                repos.matchHistory,
+              ),
+              savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
               machineComputeProvider.overrideWithValue(
                 _firstLegalActionCompute,
               ),
@@ -135,9 +138,14 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
-            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
             deviceLanguageCodeProvider.overrideWithValue('en'),
             hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
             machineComputeProvider.overrideWithValue(_firstLegalActionCompute),
             machineRandomSeedProvider.overrideWithValue(() => 1),
           ],
@@ -188,9 +196,14 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
-            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
             deviceLanguageCodeProvider.overrideWithValue('en'),
             hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
             machineComputeProvider.overrideWithValue(_firstLegalActionCompute),
             machineRandomSeedProvider.overrideWithValue(() => 1),
           ],
@@ -239,9 +252,14 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
-            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
             deviceLanguageCodeProvider.overrideWithValue('en'),
             hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
             machineComputeProvider.overrideWithValue(_firstLegalActionCompute),
             machineRandomSeedProvider.overrideWithValue(() => 1),
           ],
@@ -283,9 +301,14 @@ void main() {
               gameClockProvider.overrideWithValue(
                 _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
               ),
-              settingsRepositoryProvider.overrideWithValue(settingsRepository),
+              settingsRepositoryProvider.overrideWithValue(repos.settings),
               deviceLanguageCodeProvider.overrideWithValue('en'),
               hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+              profileRepositoryProvider.overrideWithValue(repos.profile),
+              matchHistoryRepositoryProvider.overrideWithValue(
+                repos.matchHistory,
+              ),
+              savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
               // Uses the real chooseMachineAction via the default compute's
               // easy-path shape, but here we just verify applyExternalAction
               // rejects illegal input, using a deliberately-illegal fake.
@@ -330,9 +353,14 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
-            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
             deviceLanguageCodeProvider.overrideWithValue('en'),
             hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
             machineComputeProvider.overrideWithValue(_firstLegalActionCompute),
             machineRandomSeedProvider.overrideWithValue(() => 1),
           ],

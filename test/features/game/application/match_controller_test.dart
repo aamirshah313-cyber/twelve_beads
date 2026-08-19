@@ -2,18 +2,22 @@ import 'package:clock/clock.dart' as pkg_clock;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:twelve_beads/core/history/match_history_controller.dart';
+import 'package:twelve_beads/core/history/match_record.dart';
+import 'package:twelve_beads/core/profile/profile_controller.dart';
 import 'package:twelve_beads/core/settings/settings_controller.dart';
-import 'package:twelve_beads/core/settings/settings_repository.dart';
 import 'package:twelve_beads/features/game/application/game_clock.dart';
 import 'package:twelve_beads/features/game/application/haptics_port.dart';
 import 'package:twelve_beads/features/game/application/match_config.dart';
 import 'package:twelve_beads/features/game/application/match_controller.dart';
 import 'package:twelve_beads/features/game/application/move_presentation_controller.dart';
+import 'package:twelve_beads/features/game/application/saved_game_controller.dart';
 import 'package:twelve_beads/game/board/board_graph.dart';
 import 'package:twelve_beads/game/engine/game_action.dart';
 import 'package:twelve_beads/game/engine/game_state.dart';
 import 'package:twelve_beads/game/engine/side.dart';
+
+import '../../../support/repository_overrides.dart';
 
 class _AdapterClock implements GameClock {
   _AdapterClock(this._clock);
@@ -36,16 +40,6 @@ class _NoopHapticsPort implements HapticsPort {
   void capture() {}
   @override
   void matchEnd() {}
-}
-
-/// MovePresentationController reads settings to size its animation timings,
-/// so every test container needs a real (in-memory) settings repository.
-/// `Override` isn't a publicly exported type in Riverpod 3.x, so this
-/// returns the repository itself and callers inline the overrides list
-/// (letting the `overrides:` parameter's type be inferred).
-Future<SettingsRepository> _createSettingsRepository() async {
-  SharedPreferences.setMockInitialValues({});
-  return SettingsRepository.create();
 }
 
 MatchConfig _config({int timerMinutes = 0}) => MatchConfig(
@@ -131,13 +125,16 @@ void main() {
 
     setUp(() async {
       config = _config();
-      final settingsRepository = await _createSettingsRepository();
+      final repos = await createTestRepositories();
       container = ProviderContainer(
         overrides: [
           gameClockProvider.overrideWithValue(const SystemGameClock()),
-          settingsRepositoryProvider.overrideWithValue(settingsRepository),
+          settingsRepositoryProvider.overrideWithValue(repos.settings),
           deviceLanguageCodeProvider.overrideWithValue('en'),
           hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+          profileRepositoryProvider.overrideWithValue(repos.profile),
+          matchHistoryRepositoryProvider.overrideWithValue(repos.matchHistory),
+          savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
         ],
       );
       container.listen(
@@ -269,7 +266,7 @@ void main() {
 
   group('MatchController — timer lifecycle', () {
     test('the active side\'s clock counts down while playing', () async {
-      final settingsRepository = await _createSettingsRepository();
+      final repos = await createTestRepositories();
       fakeAsync((async) {
         final config = _config(timerMinutes: 1);
         final container = ProviderContainer(
@@ -277,9 +274,14 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
-            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
             deviceLanguageCodeProvider.overrideWithValue('en'),
             hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
           ],
         );
         addTearDown(container.dispose);
@@ -307,7 +309,7 @@ void main() {
     });
 
     test('pausing freezes the clock; resuming continues it', () async {
-      final settingsRepository = await _createSettingsRepository();
+      final repos = await createTestRepositories();
       fakeAsync((async) {
         final config = _config(timerMinutes: 1);
         final container = ProviderContainer(
@@ -315,9 +317,14 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
-            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
             deviceLanguageCodeProvider.overrideWithValue('en'),
             hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
           ],
         );
         addTearDown(container.dispose);
@@ -354,7 +361,7 @@ void main() {
     });
 
     test('reaching zero applies a Timeout and ends the match', () async {
-      final settingsRepository = await _createSettingsRepository();
+      final repos = await createTestRepositories();
       fakeAsync((async) {
         final config = _config(timerMinutes: 1);
         final container = ProviderContainer(
@@ -362,9 +369,14 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
-            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
             deviceLanguageCodeProvider.overrideWithValue('en'),
             hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
           ],
         );
         addTearDown(container.dispose);
@@ -385,6 +397,145 @@ void main() {
           reason: 'top (the active side) ran out of time',
         );
       });
+    });
+  });
+
+  group('MatchController — persistence (Phase 6)', () {
+    late ProviderContainer container;
+    late MatchConfig config;
+
+    setUp(() async {
+      config = _config();
+      final repos = await createTestRepositories();
+      container = ProviderContainer(
+        overrides: [
+          gameClockProvider.overrideWithValue(const SystemGameClock()),
+          settingsRepositoryProvider.overrideWithValue(repos.settings),
+          deviceLanguageCodeProvider.overrideWithValue('en'),
+          hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+          profileRepositoryProvider.overrideWithValue(repos.profile),
+          matchHistoryRepositoryProvider.overrideWithValue(repos.matchHistory),
+          savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
+        ],
+      );
+      container.listen(
+        matchControllerProvider(config),
+        (_, _) {},
+        fireImmediately: true,
+      );
+    });
+
+    tearDown(() => container.dispose());
+
+    MatchController notifier() =>
+        container.read(matchControllerProvider(config).notifier);
+
+    test('a move autosaves a resumable snapshot', () {
+      expect(container.read(savedGameControllerProvider), isNull);
+      notifier().onNodeTapped('r1c2');
+      notifier().onNodeTapped('r2c2');
+
+      final saved = container.read(savedGameControllerProvider);
+      expect(saved, isNotNull);
+      expect(saved!.actionLog.length, 1);
+      expect(saved.config, same(config));
+    });
+
+    test('undoing back to the start clears the saved snapshot', () {
+      notifier().onNodeTapped('r1c2');
+      notifier().onNodeTapped('r2c2');
+      expect(container.read(savedGameControllerProvider), isNotNull);
+
+      notifier().undo();
+      expect(container.read(savedGameControllerProvider), isNull);
+    });
+
+    test('a resignation finalizes: updates profile stats, appends match '
+        'history, and clears the saved snapshot', () {
+      notifier().onNodeTapped('r1c2');
+      notifier().onNodeTapped('r2c2');
+      expect(container.read(savedGameControllerProvider), isNotNull);
+
+      // Bottom resigns, so top (playerOneSide in _config()) wins.
+      notifier().resign(Side.bottom);
+
+      final profile = container.read(profileControllerProvider);
+      expect(profile.matchesPlayed, 1);
+      expect(profile.wins, 1);
+      expect(profile.currentStreak, 1);
+
+      final history = container.read(matchHistoryControllerProvider);
+      expect(history.length, 1);
+      expect(history.single.outcome, MatchOutcome.win);
+      expect(history.single.winReason, WinReason.resignation);
+      expect(history.single.mode, MatchMode.twoPlayer);
+
+      expect(
+        container.read(savedGameControllerProvider),
+        isNull,
+        reason: 'a finished match must never remain resumable',
+      );
+    });
+
+    test('a loss does not increment the win streak', () {
+      // Top resigns, so top (this profile's own side) loses.
+      notifier().resign(Side.top);
+      final profile = container.read(profileControllerProvider);
+      expect(profile.losses, 1);
+      expect(profile.wins, 0);
+      expect(profile.currentStreak, 0);
+    });
+
+    test('autosave + pendingResumeSnapshotProvider hydrates a fresh '
+        'MatchController to the same in-progress state, paused', () async {
+      notifier().onNodeTapped('r1c2');
+      notifier().onNodeTapped('r2c2');
+      container
+          .read(movePresentationControllerProvider(config).notifier)
+          .cancelAndSnapToFinal();
+
+      final saved = container.read(savedGameControllerProvider);
+      expect(saved, isNotNull);
+      container.dispose();
+
+      final repos2 = await createTestRepositories();
+      final container2 = ProviderContainer(
+        overrides: [
+          gameClockProvider.overrideWithValue(const SystemGameClock()),
+          settingsRepositoryProvider.overrideWithValue(repos2.settings),
+          deviceLanguageCodeProvider.overrideWithValue('en'),
+          hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+          profileRepositoryProvider.overrideWithValue(repos2.profile),
+          matchHistoryRepositoryProvider.overrideWithValue(repos2.matchHistory),
+          savedGameRepositoryProvider.overrideWithValue(repos2.savedGame),
+        ],
+      );
+      addTearDown(container2.dispose);
+      container2.read(pendingResumeSnapshotProvider.notifier).set(saved);
+      container2.listen(
+        matchControllerProvider(config),
+        (_, _) {},
+        fireImmediately: true,
+      );
+
+      final hydrated = container2.read(matchControllerProvider(config));
+      expect(hydrated.actionLog, [const MoveAction(from: 'r1c2', to: 'r2c2')]);
+      expect(hydrated.gameState.turn, Side.bottom);
+      expect(
+        hydrated.isPaused,
+        isTrue,
+        reason: 'a resumed match must land paused, not silently ticking',
+      );
+
+      // The hand-off's consumption is deferred by one microtask (a
+      // provider can't modify another synchronously during its own
+      // build()) — flush it before asserting.
+      await Future<void>.value();
+      expect(
+        container2.read(pendingResumeSnapshotProvider),
+        isNull,
+        reason: 'the hand-off snapshot must be consumed exactly once',
+      );
     });
   });
 }

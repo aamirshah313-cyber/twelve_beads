@@ -297,6 +297,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNoMatchesYet => 'No matches played yet';
 
   @override
+  String get profileHistoryHeading => 'Recent matches';
+
+  @override
+  String get badgeFirstWinName => 'First Win';
+
+  @override
+  String get badgeFirstWinDescription => 'Win your first match.';
+
+  @override
+  String get badgeFiveMatchesName => 'Five Matches';
+
+  @override
+  String get badgeFiveMatchesDescription => 'Play five matches.';
+
+  @override
+  String get badgeCaptureSpecialistName => 'Capture Specialist';
+
+  @override
+  String get badgeCaptureSpecialistDescription =>
+      'Capture 5 beads in a single match.';
+
+  @override
+  String get badgeThreeWinStreakName => 'Three-Win Streak';
+
+  @override
+  String get badgeThreeWinStreakDescription => 'Win three matches in a row.';
+
+  @override
+  String get badgeFastFinishName => 'Fast Finish';
+
+  @override
+  String get badgeFastFinishDescription => 'Win a match in 12 moves or fewer.';
+
+  @override
+  String get badgePatientPlayerName => 'Patient Player';
+
+  @override
+  String get badgePatientPlayerDescription =>
+      'Play a match that lasts 60 moves or more.';
+
+  @override
+  String get historyOutcomeWin => 'Won';
+
+  @override
+  String get historyOutcomeLoss => 'Lost';
+
+  @override
+  String get historyOutcomeDraw => 'Draw';
+
+  @override
+  String historyOpponentMachine(String difficulty) {
+    return 'vs Machine ($difficulty)';
+  }
+
+  @override
+  String historyOpponentPlayer(String name) {
+    return 'vs $name';
+  }
+
+  @override
+  String historyMoveCount(int count) {
+    return '$count moves';
+  }
+
+  @override
+  String get resumeMatchAvailableTitle => 'You have a match in progress';
+
+  @override
+  String get resumeMatchButton => 'Resume';
+
+  @override
+  String get discardMatchButton => 'Discard';
+
+  @override
+  String get discardMatchConfirmTitle => 'Discard this match?';
+
+  @override
+  String get discardMatchConfirmBody =>
+      'The in-progress match will be permanently discarded. This cannot be undone.';
+
+  @override
   String get settingsScreenTitle => 'Settings';
 
   @override
@@ -350,7 +431,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteConfirmBody =>
-      'This permanently removes your settings, profiles and match history from this device. This cannot be undone.';
+      'This permanently removes your settings, profile, badges, match history and any in-progress match from this device. This cannot be undone.';
 
   @override
   String get commonOn => 'On';

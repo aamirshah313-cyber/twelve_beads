@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:twelve_beads/core/history/match_history_controller.dart';
 import 'package:twelve_beads/core/l10n/gen/app_localizations.dart';
 import 'package:twelve_beads/core/profile/profile_controller.dart';
-import 'package:twelve_beads/core/profile/profile_repository.dart';
 import 'package:twelve_beads/core/routing/app_router.dart';
 import 'package:twelve_beads/core/settings/settings_controller.dart';
-import 'package:twelve_beads/core/settings/settings_repository.dart';
+import 'package:twelve_beads/features/game/application/saved_game_controller.dart';
 import 'package:twelve_beads/main.dart';
 
+import 'support/repository_overrides.dart';
+
 Future<ProviderScope> _buildApp({required String deviceLanguageCode}) async {
-  SharedPreferences.setMockInitialValues({});
-  final settingsRepository = await SettingsRepository.create();
-  final profileRepository = await ProfileRepository.create();
+  final repos = await createTestRepositories();
   return ProviderScope(
     overrides: [
       deviceLanguageCodeProvider.overrideWithValue(deviceLanguageCode),
-      settingsRepositoryProvider.overrideWithValue(settingsRepository),
-      profileRepositoryProvider.overrideWithValue(profileRepository),
+      settingsRepositoryProvider.overrideWithValue(repos.settings),
+      profileRepositoryProvider.overrideWithValue(repos.profile),
+      matchHistoryRepositoryProvider.overrideWithValue(repos.matchHistory),
+      savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
     ],
     child: const TwelveBeadsApp(),
   );

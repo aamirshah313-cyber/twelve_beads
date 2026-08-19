@@ -298,6 +298,87 @@ class AppLocalizationsUr extends AppLocalizations {
   String get profileNoMatchesYet => 'ابھی تک کوئی میچ نہیں کھیلا گیا';
 
   @override
+  String get profileHistoryHeading => 'حالیہ میچز';
+
+  @override
+  String get badgeFirstWinName => 'پہلی جیت';
+
+  @override
+  String get badgeFirstWinDescription => 'اپنا پہلا میچ جیتیں۔';
+
+  @override
+  String get badgeFiveMatchesName => 'پانچ میچز';
+
+  @override
+  String get badgeFiveMatchesDescription => 'پانچ میچز کھیلیں۔';
+
+  @override
+  String get badgeCaptureSpecialistName => 'گوٹ ماہر';
+
+  @override
+  String get badgeCaptureSpecialistDescription =>
+      'ایک ہی میچ میں 5 گوٹیاں ماریں۔';
+
+  @override
+  String get badgeThreeWinStreakName => 'تین جیتوں کا سلسلہ';
+
+  @override
+  String get badgeThreeWinStreakDescription => 'لگاتار تین میچز جیتیں۔';
+
+  @override
+  String get badgeFastFinishName => 'تیز اختتام';
+
+  @override
+  String get badgeFastFinishDescription => '12 یا کم چالوں میں میچ جیتیں۔';
+
+  @override
+  String get badgePatientPlayerName => 'صابر کھلاڑی';
+
+  @override
+  String get badgePatientPlayerDescription =>
+      '60 یا زیادہ چالوں تک چلنے والا میچ کھیلیں۔';
+
+  @override
+  String get historyOutcomeWin => 'جیت';
+
+  @override
+  String get historyOutcomeLoss => 'شکست';
+
+  @override
+  String get historyOutcomeDraw => 'برابر';
+
+  @override
+  String historyOpponentMachine(String difficulty) {
+    return 'بمقابلہ مشین ($difficulty)';
+  }
+
+  @override
+  String historyOpponentPlayer(String name) {
+    return 'بمقابلہ $name';
+  }
+
+  @override
+  String historyMoveCount(int count) {
+    return '$count چالیں';
+  }
+
+  @override
+  String get resumeMatchAvailableTitle => 'آپ کا ایک میچ جاری ہے';
+
+  @override
+  String get resumeMatchButton => 'جاری رکھیں';
+
+  @override
+  String get discardMatchButton => 'مسترد کریں';
+
+  @override
+  String get discardMatchConfirmTitle => 'اس میچ کو مسترد کریں؟';
+
+  @override
+  String get discardMatchConfirmBody =>
+      'جاری میچ مستقل طور پر مسترد ہو جائے گا۔ اسے واپس نہیں لایا جا سکتا۔';
+
+  @override
   String get settingsScreenTitle => 'ترتیبات';
 
   @override
@@ -351,7 +432,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get settingsDeleteConfirmBody =>
-      'اس سے آپ کی ترتیبات، پروفائلز اور میچ کی تاریخ اس آلے سے مستقل طور پر حذف ہو جائیں گی۔ اسے واپس نہیں لایا جا سکتا۔';
+      'اس سے آپ کی ترتیبات، پروفائل، بیجز، میچ کی تاریخ اور کوئی بھی جاری میچ اس آلے سے مستقل طور پر حذف ہو جائیں گے۔ اسے واپس نہیں لایا جا سکتا۔';
 
   @override
   String get commonOn => 'آن';
