@@ -13,7 +13,15 @@ class RulesScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.rulesScreenTitle)),
+      appBar: AppBar(
+        title: Text(l10n.rulesScreenTitle),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Center(child: Chip(label: Text(l10n.rulesVariantLabel))),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -28,6 +36,10 @@ class RulesScreen extends StatelessWidget {
                 Text(l10n.rulesMovementHeading, style: textTheme.headlineSmall),
                 const SizedBox(height: AppSpacing.sm),
                 Text(l10n.rulesMovementBody, style: textTheme.bodyLarge),
+                const SizedBox(height: AppSpacing.lg),
+                Text(l10n.rulesWinningHeading, style: textTheme.headlineSmall),
+                const SizedBox(height: AppSpacing.sm),
+                Text(l10n.rulesWinningBody, style: textTheme.bodyLarge),
                 const SizedBox(height: AppSpacing.lg),
                 Card(
                   color: colorScheme.secondaryContainer,

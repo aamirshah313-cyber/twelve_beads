@@ -281,19 +281,37 @@ abstract class AppLocalizations {
   /// No description provided for @rulesMovementBody.
   ///
   /// In en, this message translates to:
-  /// **'A bead moves one step along any connected line to an empty junction. A capture jumps in a straight line over an adjacent opponent bead onto an empty junction directly beyond it, removing the jumped bead.'**
+  /// **'A bead moves one step along any connected line, in any direction, to an empty junction. A capture jumps in a straight line over an adjacent opponent bead onto an empty junction directly beyond it, removing the jumped bead. If any capture is available, you must capture rather than make a simple move. If that capture lands somewhere with another capture available, you must continue jumping until no more captures remain from that spot.'**
   String get rulesMovementBody;
+
+  /// No description provided for @rulesWinningHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Winning'**
+  String get rulesWinningHeading;
+
+  /// No description provided for @rulesWinningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You win by capturing every one of your opponent\'s beads, or by leaving them with no legal move on their turn. A match with no capture for 40 turns in a row ends in a draw.'**
+  String get rulesWinningBody;
+
+  /// No description provided for @rulesVariantLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ruleset: Classic'**
+  String get rulesVariantLabel;
 
   /// No description provided for @rulesOpenQuestionsHeading.
   ///
   /// In en, this message translates to:
-  /// **'Still being finalized'**
+  /// **'Defaults, open to change'**
   String get rulesOpenQuestionsHeading;
 
   /// No description provided for @rulesOpenQuestionsBody.
   ///
   /// In en, this message translates to:
-  /// **'The exact match rules below are still being confirmed and may change before release: whether capturing is mandatory when available, whether a capture chain must continue once started, how draws/repetition are handled, the exact win condition, backward movement, and undo availability.'**
+  /// **'These rules use sensible defaults for this style of board rather than a confirmed regional source: no maximum-capture requirement (any legal capture is enough), and a 40-turn no-capture limit as a safeguard rather than a traditional repetition rule. Ask to change these any time.'**
   String get rulesOpenQuestionsBody;
 
   /// No description provided for @profileScreenTitle.

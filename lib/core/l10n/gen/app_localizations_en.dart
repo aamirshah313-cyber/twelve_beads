@@ -105,14 +105,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rulesMovementBody =>
-      'A bead moves one step along any connected line to an empty junction. A capture jumps in a straight line over an adjacent opponent bead onto an empty junction directly beyond it, removing the jumped bead.';
+      'A bead moves one step along any connected line, in any direction, to an empty junction. A capture jumps in a straight line over an adjacent opponent bead onto an empty junction directly beyond it, removing the jumped bead. If any capture is available, you must capture rather than make a simple move. If that capture lands somewhere with another capture available, you must continue jumping until no more captures remain from that spot.';
 
   @override
-  String get rulesOpenQuestionsHeading => 'Still being finalized';
+  String get rulesWinningHeading => 'Winning';
+
+  @override
+  String get rulesWinningBody =>
+      'You win by capturing every one of your opponent\'s beads, or by leaving them with no legal move on their turn. A match with no capture for 40 turns in a row ends in a draw.';
+
+  @override
+  String get rulesVariantLabel => 'Ruleset: Classic';
+
+  @override
+  String get rulesOpenQuestionsHeading => 'Defaults, open to change';
 
   @override
   String get rulesOpenQuestionsBody =>
-      'The exact match rules below are still being confirmed and may change before release: whether capturing is mandatory when available, whether a capture chain must continue once started, how draws/repetition are handled, the exact win condition, backward movement, and undo availability.';
+      'These rules use sensible defaults for this style of board rather than a confirmed regional source: no maximum-capture requirement (any legal capture is enough), and a 40-turn no-capture limit as a safeguard rather than a traditional repetition rule. Ask to change these any time.';
 
   @override
   String get profileScreenTitle => 'Profile';

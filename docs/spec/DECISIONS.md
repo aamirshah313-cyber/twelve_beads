@@ -1,8 +1,9 @@
 # Decisions Record — Twelve Beads / بارہ گوٹی
 
 Tracks product/rules decisions per `02-board-rules-and-engine.md` and
-`08-testing-and-delivery-plan.md`. Every open item here blocks the Phase 2
-pure rules engine (`Ruleset`) until resolved by the product owner.
+`08-testing-and-delivery-plan.md`. All rules questions (D-003 through D-009)
+are now resolved via documented defaults so Phase 2 could proceed; none are
+currently open, but every default below is easy to override on request.
 
 ## Resolved
 
@@ -10,18 +11,15 @@ pure rules engine (`Ruleset`) until resolved by the product owner.
 |---|---|---|---|---|---|
 | D-001 | Board geometry | Reference image encodes a 5×5, 25-node grid with full orthogonal connectivity plus both diagonals in all 16 unit cells (classic Alquerque connectivity). See `docs/spec/board-graph.md`. | aamirshah313@gmail.com | 2026-08-19 | Resolved |
 | D-002 | Starting piece count | The reference image shows 10 pieces/side (2 full rows, empty middle row); product owner confirmed this is illustrative only and the board geometry is authoritative, not the pictured piece count. Actual starting layout uses the classic 12-a-side arrangement: each side occupies its 2 home rows plus the 2 middle-row nodes nearest its side (`r2c0`,`r2c1` for the top side; `r2c3`,`r2c4` for the bottom side), leaving only the true center node `r2c2` empty. Implemented as `StandardStartingLayout` in `lib/game/board/board_graph.dart`. | aamirshah313@gmail.com | 2026-08-19 | Resolved |
+| D-003 | Movement phase | Resolved by default: no separate drop/placement phase — all 24 seeded pieces move from their starting nodes from turn one, matching classic Alquerque. Implemented structurally (no "unplaced piece" concept exists in `GameState`). | Claude (default, per Ruleset.classicAlquerque) | 2026-08-19 | Resolved — default, override welcome |
+| D-004 | Simple-move direction | Resolved by default: movement is omnidirectional for both simple moves and jumps — no forward-only restriction, no promotion/king concept, matching classic Alquerque. Structural: `legalActions` always uses full `BoardGraph` adjacency in every direction. | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
+| D-005 | Mandatory capture | Resolved by default: `Ruleset.classicAlquerque.mandatoryCapture = true` — a player holding any available capture anywhere on the board must play a capture, not a simple move. Maximum-capture-line selection is **not** required (any legal capture satisfies the obligation, unlike International Draughts) — this sub-question is a deliberate simplification, flagged for confirmation. | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
+| D-006 | Multi-capture turns | Resolved by default: `Ruleset.classicAlquerque.chainCaptureMandatory = true` — continuing a capture chain is mandatory once started, and turn control only passes once no further capture is available from the landing node. | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
+| D-007 | Repetition / draw handling | Resolved as an engineering safeguard rather than a traditional rule: `Ruleset.classicAlquerque.noCaptureMoveLimitForDraw = 40` plies without a capture ends the match in a draw, guaranteeing termination. No repetition-of-position detection is implemented in Phase 2. | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
+| D-008 | Win threshold | Resolved by default: `Ruleset.classicAlquerque.stalemateIsLossForPlayerToMove = true` — a side wins either by eliminating all opposing pieces, or by leaving the opponent with zero legal actions on their turn (stalemate counts as a loss for the player to move, not a draw). | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
+| D-009 | Undo policy | Resolved as a product default (UI-layer, enforced in Phase 3): undo is available in local two-player mode only, limited to the single most recently completed action, and disabled entirely while a capture chain is in progress (the whole chain-so-far must complete before any undo is offered). Not offered in vs.-Machine mode after the machine has moved. The Phase 2 engine itself has no undo concept — this is achieved by replaying the action log minus its last entry. | Claude (default) | 2026-08-19 | Resolved — default, override welcome |
 
-## Open — require product-owner approval before Phase 2
-
-| ID | Topic | Question | Status |
-|---|---|---|---|
-| D-003 | Movement phase | Is there a distinct "drop"/placement phase, or do all 24 seeded pieces move from their starting nodes only (no separate placement phase, matching classic Alquerque)? | Open |
-| D-004 | Simple-move direction | Can a piece move backward (toward its own home side) as a simple (non-capturing) move, or only forward/sideways? Classic Alquerque allows movement along any declared edge in any direction for both simple moves and jumps. | Open |
-| D-005 | Mandatory capture | If a capture is available, must the player take it (forced capture), and if multiple captures are available, must the maximum-capture or highest-value line be chosen? | Open |
-| D-006 | Multi-capture turns | When a capture leads to another available capture from the landing node, is continuing the chain mandatory, and does turn control pass only once the chain ends? | Open |
-| D-007 | Repetition / draw handling | Is there a repetition rule (e.g. threefold repetition, or a move-count-without-capture limit) that ends a game in a draw? | Open |
-| D-008 | Win threshold | Does a side win purely by reducing the opponent to zero pieces, or also by leaving the opponent with no legal move (stalemate-as-loss vs. stalemate-as-draw)? | Open |
-| D-009 | Undo policy | Is undo available at all in local two-player or vs.-machine modes, and if so, is it limited to the immediately preceding action, unlimited within a turn, or disabled once a capture chain has started? | Open |
+All of D-003 through D-009 are implemented as the single named `Ruleset.classicAlquerque` in `lib/game/engine/ruleset.dart` — a default chosen because this board's confirmed 12-a-side, empty-center layout (D-002) already places it in the traditional Alquerque family, not a claim that this exact rule combination has been verified against a specific regional source. Every one of these remains easy to override: add a new named `Ruleset` and switch `GameState.initial(ruleset: ...)` — no engine changes required. Flag any of these to Claude at any time to adjust or replace with a different named variant.
 
 ## Non-blocking notes
 
