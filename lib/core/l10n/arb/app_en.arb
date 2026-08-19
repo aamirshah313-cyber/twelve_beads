@@ -74,6 +74,30 @@
   "matchOverNewMatchButton": "New Match",
   "matchOverHomeButton": "Home",
   "timeUpMessage": "Time's up",
+  "nodePosition": "row {row}, column {column}",
+  "@nodePosition": {
+    "description": "Plain-language description of a board junction for screen readers; never expose internal node IDs.",
+    "placeholders": {"row": {"type": "int"}, "column": {"type": "int"}}
+  },
+  "moveAnnouncement": "{actor} moved from {source} to {destination}",
+  "@moveAnnouncement": {
+    "placeholders": {
+      "actor": {"type": "String"},
+      "source": {"type": "String"},
+      "destination": {"type": "String"}
+    }
+  },
+  "captureAnnouncement": "{actor} captured a bead, moving from {source} to {destination}",
+  "@captureAnnouncement": {
+    "placeholders": {
+      "actor": {"type": "String"},
+      "source": {"type": "String"},
+      "destination": {"type": "String"}
+    }
+  },
+  "chainStepAnnouncement": "Capture chain, step {step}",
+  "@chainStepAnnouncement": {"placeholders": {"step": {"type": "int"}}},
+  "opponentMoveInProgress": "Move in progress",
 
   "rulesScreenTitle": "How to Play",
   "rulesBoardHeading": "The Board",

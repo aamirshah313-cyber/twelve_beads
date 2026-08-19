@@ -36,4 +36,28 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
   user can tell a piece's owner but not which specific junction they're on
   by label text alone (swipe order is still correct/consistent). Deferred to
   Phase 7 (accessibility polish), where each node's label can include its
-  position in plain language.
+  position (the `describeNode`/`nodePosition` helper added in Phase 4 for
+  move announcements can be reused there).
+- Phase 4 scope notes:
+  - Sound cues are wired end-to-end (`SoundPort`, called at the right
+    presentation-timeline moments, gated by `settings.soundOn`) but
+    currently a documented no-op (`NoopSoundPort`) — no licensed audio
+    assets are bundled yet. Haptics are real (`HapticFeedback` via
+    `HapticsPort`). Swap in a real `SoundPort` once assets are sourced.
+  - The High visual-quality tier currently uses the same timing/trail
+    treatment as Standard (no additional particles/shaders) — the spec
+    only allows richer High-tier effects "after profiling," which belongs
+    in Phase 7 alongside the rest of the performance work.
+  - The move-presentation timeline is driven by plain `Timer`s in the
+    `MovePresentationController` Riverpod notifier, not a widget-owned
+    `Ticker`/`AnimationController`. This keeps timing logic independent of
+    any widget's vsync and easy to unit-test with `fake_async`, but it
+    means `tester.pumpAndSettle()` alone does not wait for it in widget
+    tests (a bare `Timer` isn't scheduler-tracked the way a Ticker is) —
+    tests use an explicit `tester.pump(duration)` after interactions that
+    trigger a move instead. `SystemGameClock` reads `package:clock`'s
+    ambient clock (not raw `DateTime.now()`) specifically so this stays
+    correct inside `flutter_test`'s `fake_async` zone.
+  - Node numbering starts at row 0 / column 0 internally (`r{row}c{col}`,
+    per `board_graph.dart`); screen-reader announcements add 1 for the
+    1-indexed "row X, column Y" phrasing humans expect.

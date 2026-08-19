@@ -446,6 +446,36 @@ abstract class AppLocalizations {
   /// **'Time\'s up'**
   String get timeUpMessage;
 
+  /// Plain-language description of a board junction for screen readers; never expose internal node IDs.
+  ///
+  /// In en, this message translates to:
+  /// **'row {row}, column {column}'**
+  String nodePosition(int row, int column);
+
+  /// No description provided for @moveAnnouncement.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} moved from {source} to {destination}'**
+  String moveAnnouncement(String actor, String source, String destination);
+
+  /// No description provided for @captureAnnouncement.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} captured a bead, moving from {source} to {destination}'**
+  String captureAnnouncement(String actor, String source, String destination);
+
+  /// No description provided for @chainStepAnnouncement.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture chain, step {step}'**
+  String chainStepAnnouncement(int step);
+
+  /// No description provided for @opponentMoveInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Move in progress'**
+  String get opponentMoveInProgress;
+
   /// No description provided for @rulesScreenTitle.
   ///
   /// In en, this message translates to:

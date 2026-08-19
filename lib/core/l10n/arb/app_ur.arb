@@ -61,6 +61,11 @@
   "matchOverNewMatchButton": "نیا میچ",
   "matchOverHomeButton": "ہوم",
   "timeUpMessage": "وقت ختم",
+  "nodePosition": "قطار {row}، کالم {column}",
+  "moveAnnouncement": "{actor} نے {source} سے {destination} تک چال چلی",
+  "captureAnnouncement": "{actor} نے گوٹ ماری، {source} سے {destination} تک",
+  "chainStepAnnouncement": "سلسلہ وار گوٹ، مرحلہ {step}",
+  "opponentMoveInProgress": "چال جاری ہے",
 
   "rulesScreenTitle": "کھیلنے کا طریقہ",
   "rulesBoardHeading": "بورڈ",

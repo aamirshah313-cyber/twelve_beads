@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../game/board/board_graph.dart';
 import '../../../game/engine/game_state.dart';
 import '../../../game/engine/side.dart';
 import '../application/match_config.dart';
 import '../application/match_controller.dart';
+import '../application/move_presentation_controller.dart';
+import '../application/move_presentation_state.dart';
 import 'board_painter.dart';
 import 'board_widget.dart';
+
+/// Plain-language description of a node for screen readers — stable node
+/// IDs like `r1c2` are never exposed as raw technical copy.
+String describeNode(AppLocalizations l10n, NodeId nodeId) {
+  final row = int.parse(nodeId.substring(1, 2));
+  final col = int.parse(nodeId.substring(3, 4));
+  return l10n.nodePosition(row + 1, col + 1);
+}
 
 class MatchScreen extends ConsumerStatefulWidget {
   const MatchScreen({super.key, required this.config});
@@ -52,6 +64,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     final provider = matchControllerProvider(widget.config);
     final matchState = ref.watch(provider);
     final controller = ref.read(provider.notifier);
+    final presentationProvider = movePresentationControllerProvider(
+      widget.config,
+    );
+    final presentation = ref.watch(presentationProvider);
 
     ref.listen(provider, (previous, next) {
       if (next.gameState.phase == GamePhase.finished && !_dialogShown) {
@@ -60,6 +76,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           if (mounted) _showMatchOverDialog(context, next, l10n, controller);
         });
       }
+    });
+
+    ref.listen(presentationProvider, (previous, next) {
+      _announcePresentationChange(context, l10n, previous, next);
     });
 
     return Scaffold(
@@ -114,10 +134,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     ? _LandscapeMatchLayout(
                         config: widget.config,
                         state: matchState,
+                        presentation: presentation,
                       )
                     : _PortraitMatchLayout(
                         config: widget.config,
                         state: matchState,
+                        presentation: presentation,
                       );
               },
             ),
@@ -191,6 +213,55 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     }
   }
 
+  /// TalkBack gets ordered, concise descriptions of actor/source/
+  /// destination/captured-piece/chain-step/next-turn — never raw node IDs.
+  void _announcePresentationChange(
+    BuildContext context,
+    AppLocalizations l10n,
+    MovePresentationState? previous,
+    MovePresentationState next,
+  ) {
+    final direction = Directionality.of(context);
+    final view = View.of(context);
+    final nextEvent = next.current?.event;
+    final startedNewStep =
+        nextEvent != null && nextEvent != previous?.current?.event;
+
+    if (startedNewStep) {
+      final actorName = widget.config.nameForSide(nextEvent.actor);
+      final source = nextEvent.source != null
+          ? describeNode(l10n, nextEvent.source!)
+          : '';
+      final destination = nextEvent.destination != null
+          ? describeNode(l10n, nextEvent.destination!)
+          : '';
+      final message = nextEvent.capturedNodes.isNotEmpty
+          ? l10n.captureAnnouncement(actorName, source, destination)
+          : l10n.moveAnnouncement(actorName, source, destination);
+      SemanticsService.sendAnnouncement(view, message, direction);
+      if (nextEvent.chainStep > 0) {
+        SemanticsService.sendAnnouncement(
+          view,
+          l10n.chainStepAnnouncement(nextEvent.chainStep + 1),
+          direction,
+        );
+      }
+    }
+
+    final justFinishedPlaying = previous?.isPlaying == true && !next.isPlaying;
+    if (justFinishedPlaying) {
+      final matchState = ref.read(matchControllerProvider(widget.config));
+      if (matchState.gameState.phase == GamePhase.playing) {
+        final turnName = widget.config.nameForSide(matchState.gameState.turn);
+        SemanticsService.sendAnnouncement(
+          view,
+          l10n.turnBanner(turnName),
+          direction,
+        );
+      }
+    }
+  }
+
   void _showMatchOverDialog(
     BuildContext context,
     MatchUiState matchState,
@@ -249,16 +320,21 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
 }
 
 class _PortraitMatchLayout extends StatelessWidget {
-  const _PortraitMatchLayout({required this.config, required this.state});
+  const _PortraitMatchLayout({
+    required this.config,
+    required this.state,
+    required this.presentation,
+  });
 
   final MatchConfig config;
   final MatchUiState state;
+  final MovePresentationState presentation;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _TurnBanner(config: config, state: state),
+        _TurnBanner(config: config, state: state, presentation: presentation),
         _PlayerRail(config: config, state: state, side: Side.top),
         Expanded(
           child: Padding(
@@ -278,10 +354,15 @@ class _PortraitMatchLayout extends StatelessWidget {
 }
 
 class _LandscapeMatchLayout extends StatelessWidget {
-  const _LandscapeMatchLayout({required this.config, required this.state});
+  const _LandscapeMatchLayout({
+    required this.config,
+    required this.state,
+    required this.presentation,
+  });
 
   final MatchConfig config;
   final MatchUiState state;
+  final MovePresentationState presentation;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +377,11 @@ class _LandscapeMatchLayout extends StatelessWidget {
         Expanded(
           child: Column(
             children: [
-              _TurnBanner(config: config, state: state),
+              _TurnBanner(
+                config: config,
+                state: state,
+                presentation: presentation,
+              ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -323,16 +408,22 @@ class _LandscapeMatchLayout extends StatelessWidget {
 }
 
 class _TurnBanner extends StatelessWidget {
-  const _TurnBanner({required this.config, required this.state});
+  const _TurnBanner({
+    required this.config,
+    required this.state,
+    required this.presentation,
+  });
 
   final MatchConfig config;
   final MatchUiState state;
+  final MovePresentationState presentation;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     final name = config.nameForSide(state.gameState.turn);
+    final chainStep = presentation.current?.event.chainStep;
 
     return Semantics(
       liveRegion: true,
@@ -340,8 +431,32 @@ class _TurnBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Column(
           children: [
-            Text(l10n.turnBanner(name), style: textTheme.titleLarge),
-            if (state.forcedCaptureActive)
+            // A localized, non-instant turn-transition cue: the text swaps
+            // with a brief animated switch whenever the turn actually
+            // changes, rather than jumping silently.
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: Text(
+                l10n.turnBanner(name),
+                key: ValueKey(state.gameState.turn),
+                style: textTheme.titleLarge,
+              ),
+            ),
+            if (presentation.isPlaying)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Semantics(
+                  liveRegion: true,
+                  label: l10n.opponentMoveInProgress,
+                  child: Text(
+                    chainStep != null && chainStep > 0
+                        ? l10n.chainStepAnnouncement(chainStep + 1)
+                        : l10n.opponentMoveInProgress,
+                    style: textTheme.bodyMedium,
+                  ),
+                ),
+              ),
+            if (state.forcedCaptureActive && !presentation.isPlaying)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
                 child: Text(

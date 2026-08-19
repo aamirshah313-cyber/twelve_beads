@@ -205,6 +205,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timeUpMessage => 'Time\'s up';
 
   @override
+  String nodePosition(int row, int column) {
+    return 'row $row, column $column';
+  }
+
+  @override
+  String moveAnnouncement(String actor, String source, String destination) {
+    return '$actor moved from $source to $destination';
+  }
+
+  @override
+  String captureAnnouncement(String actor, String source, String destination) {
+    return '$actor captured a bead, moving from $source to $destination';
+  }
+
+  @override
+  String chainStepAnnouncement(int step) {
+    return 'Capture chain, step $step';
+  }
+
+  @override
+  String get opponentMoveInProgress => 'Move in progress';
+
+  @override
   String get rulesScreenTitle => 'How to Play';
 
   @override

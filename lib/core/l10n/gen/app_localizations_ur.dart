@@ -206,6 +206,29 @@ class AppLocalizationsUr extends AppLocalizations {
   String get timeUpMessage => 'وقت ختم';
 
   @override
+  String nodePosition(int row, int column) {
+    return 'قطار $row، کالم $column';
+  }
+
+  @override
+  String moveAnnouncement(String actor, String source, String destination) {
+    return '$actor نے $source سے $destination تک چال چلی';
+  }
+
+  @override
+  String captureAnnouncement(String actor, String source, String destination) {
+    return '$actor نے گوٹ ماری، $source سے $destination تک';
+  }
+
+  @override
+  String chainStepAnnouncement(int step) {
+    return 'سلسلہ وار گوٹ، مرحلہ $step';
+  }
+
+  @override
+  String get opponentMoveInProgress => 'چال جاری ہے';
+
+  @override
   String get rulesScreenTitle => 'کھیلنے کا طریقہ';
 
   @override

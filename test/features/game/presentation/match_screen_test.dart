@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:twelve_beads/core/l10n/gen/app_localizations.dart';
+import 'package:twelve_beads/core/settings/settings_controller.dart';
+import 'package:twelve_beads/core/settings/settings_repository.dart';
 import 'package:twelve_beads/features/game/application/match_config.dart';
 import 'package:twelve_beads/features/game/presentation/board_widget.dart';
 import 'package:twelve_beads/features/game/presentation/match_screen.dart';
@@ -17,27 +20,43 @@ MatchConfig _config() => const MatchConfig(
   timerMinutes: 0,
 );
 
+/// Taps a board node, then flushes both the immediate state change and any
+/// resulting move-presentation animation. `pumpAndSettle()` alone is not
+/// enough here: it only keeps pumping while the scheduler has an active
+/// Ticker/AnimationController-driven frame pending, but the presentation
+/// timeline deliberately uses plain `Timer`s (no vsync needed at the
+/// controller layer), so a plain single-shot `Timer` scheduled a little
+/// into the future doesn't register as "still animating" between pumps.
 Future<void> _tapNode(WidgetTester tester, NodeId node) async {
   final boardRect = tester.getRect(find.byType(BoardWidget));
   final layout = BoardLayout.fromGraph(BoardGraph.standard(), boardRect.size);
   final local = layout.positions[node]!;
   await tester.tapAt(boardRect.topLeft + Offset(local.dx, local.dy));
-  await tester.pumpAndSettle();
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
 }
 
-Widget _app() => ProviderScope(
-  child: MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: MatchScreen(config: _config()),
-  ),
-);
+Future<Widget> _app() async {
+  SharedPreferences.setMockInitialValues({});
+  final settingsRepository = await SettingsRepository.create();
+  return ProviderScope(
+    overrides: [
+      settingsRepositoryProvider.overrideWithValue(settingsRepository),
+      deviceLanguageCodeProvider.overrideWithValue('en'),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: MatchScreen(config: _config()),
+    ),
+  );
+}
 
 void main() {
   testWidgets('match screen shows the turn banner and both player rails', (
     tester,
   ) async {
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(await _app());
     await tester.pumpAndSettle();
 
     expect(find.text("Alice's turn"), findsOneWidget);
@@ -48,7 +67,7 @@ void main() {
   testWidgets(
     'tapping a piece then its target performs the move and updates the turn banner',
     (tester) async {
-      await tester.pumpWidget(_app());
+      await tester.pumpWidget(await _app());
       await tester.pumpAndSettle();
 
       await _tapNode(tester, 'r1c2');
@@ -63,7 +82,7 @@ void main() {
   testWidgets(
     'pause shows the paused overlay and blocks board input until resumed',
     (tester) async {
-      await tester.pumpWidget(_app());
+      await tester.pumpWidget(await _app());
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Pause'));
@@ -84,7 +103,7 @@ void main() {
   testWidgets(
     'resign shows a confirmation dialog and, once confirmed, the match-over dialog',
     (tester) async {
-      await tester.pumpWidget(_app());
+      await tester.pumpWidget(await _app());
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Resign'));
@@ -100,9 +119,63 @@ void main() {
   );
 
   testWidgets(
+    'board input is locked while a move animation is playing, then unlocked once it finishes',
+    (tester) async {
+      await tester.pumpWidget(await _app());
+      await tester.pumpAndSettle();
+
+      final boardRect = tester.getRect(find.byType(BoardWidget));
+      final layout = BoardLayout.fromGraph(
+        BoardGraph.standard(),
+        boardRect.size,
+      );
+      Future<void> tapRaw(NodeId node) async {
+        final local = layout.positions[node]!;
+        await tester.tapAt(boardRect.topLeft + Offset(local.dx, local.dy));
+      }
+
+      await tapRaw('r1c2');
+      await tester.pump();
+      await tapRaw('r2c2');
+      await tester
+          .pump(); // apply the move synchronously; animation now playing
+
+      expect(find.text('Move in progress'), findsOneWidget);
+      expect(
+        find.text("Alice's turn"),
+        findsOneWidget,
+        reason: 'the AnimatedSwitcher has not yet settled on the new turn text',
+      );
+
+      // A tap during playback must be ignored: the board must not react to
+      // input while the opponent-move presentation is animating.
+      await tapRaw('r3c2');
+      await tester.pump();
+      expect(
+        find.text('Move in progress'),
+        findsOneWidget,
+        reason:
+            'still mid-animation, so the tap on r3c2 must have been ignored',
+      );
+
+      // Flush the animation, then confirm the board is interactive again and
+      // reflects the true post-move state.
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Capture available — you must capture'), findsOneWidget);
+
+      await tapRaw('r3c2');
+      await tester.pump();
+      await tapRaw('r1c2');
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text("Alice's turn"), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'restart confirmation resets the board back to the initial position',
     (tester) async {
-      await tester.pumpWidget(_app());
+      await tester.pumpWidget(await _app());
       await tester.pumpAndSettle();
 
       await _tapNode(tester, 'r1c2');

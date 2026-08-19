@@ -27,6 +27,15 @@ class BoardVisualState {
   final NodeId? lastMoveDestination;
   final ColorScheme colorScheme;
 
+  // Opponent-move presentation timeline overlay (Phase 4). All optional:
+  // null/empty when no move is currently animating.
+  final NodeId? presentationSourceNode;
+  final NodeId? presentationDestinationNode;
+  final NodeId? presentationCapturedNode;
+  final Side? animatingBeadSide;
+  final Offset? animatingBeadPosition;
+  final bool showTrail;
+
   const BoardVisualState({
     required this.graph,
     required this.layout,
@@ -38,6 +47,12 @@ class BoardVisualState {
     required this.lastMoveSource,
     required this.lastMoveDestination,
     required this.colorScheme,
+    this.presentationSourceNode,
+    this.presentationDestinationNode,
+    this.presentationCapturedNode,
+    this.animatingBeadSide,
+    this.animatingBeadPosition,
+    this.showTrail = false,
   });
 }
 
@@ -55,6 +70,9 @@ class BoardPainter extends CustomPainter {
     _paintNodesAndPieces(canvas);
     _paintSelection(canvas);
     _paintLegalTargets(canvas);
+    _paintPresentationHighlights(canvas);
+    _paintPresentationTrail(canvas);
+    _paintPresentationBead(canvas);
   }
 
   void _paintBackground(Canvas canvas, Size size) {
@@ -207,6 +225,114 @@ class BoardPainter extends CustomPainter {
       final center = visual.layout.positions[node];
       if (center == null) continue;
       canvas.drawCircle(center, visual.layout.nodeSpacing * 0.44, paint);
+    }
+  }
+
+  /// Source/destination/captured-piece cues for the currently-playing
+  /// presentation step. Deliberately a different shape (double ring /
+  /// cross-out) than the local player's own selection ring and the forced-
+  /// capture dashed ring, so an opponent move is never confused with the
+  /// viewer's own turn state — a "non-colour cue" per
+  /// 04-ui-ux-and-visual-system.md.
+  void _paintPresentationHighlights(Canvas canvas) {
+    final sourcePaint = Paint()
+      ..color = visual.colorScheme.secondary
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+
+    final source = visual.presentationSourceNode;
+    if (source != null) {
+      final center = visual.layout.positions[source];
+      if (center != null) {
+        canvas.drawCircle(
+          center,
+          visual.layout.nodeSpacing * 0.36,
+          sourcePaint,
+        );
+        canvas.drawCircle(
+          center,
+          visual.layout.nodeSpacing * 0.44,
+          sourcePaint,
+        );
+      }
+    }
+
+    final destination = visual.presentationDestinationNode;
+    if (destination != null) {
+      final center = visual.layout.positions[destination];
+      if (center != null) {
+        final destPaint = Paint()
+          ..color = visual.colorScheme.secondary
+          ..strokeWidth = 3
+          ..style = PaintingStyle.stroke;
+        canvas.drawCircle(center, visual.layout.nodeSpacing * 0.4, destPaint);
+      }
+    }
+
+    final captured = visual.presentationCapturedNode;
+    if (captured != null) {
+      final center = visual.layout.positions[captured];
+      if (center != null) {
+        final crossPaint = Paint()
+          ..color = visual.colorScheme.error
+          ..strokeWidth = 3
+          ..strokeCap = StrokeCap.round;
+        final r = visual.layout.nodeSpacing * 0.3;
+        canvas.drawLine(
+          Offset(center.dx - r, center.dy - r),
+          Offset(center.dx + r, center.dy + r),
+          crossPaint,
+        );
+        canvas.drawLine(
+          Offset(center.dx + r, center.dy - r),
+          Offset(center.dx - r, center.dy + r),
+          crossPaint,
+        );
+      }
+    }
+  }
+
+  /// Lightweight fading trail from the source node to the bead's current
+  /// animated position — Standard/High quality only (Low and reduced-motion
+  /// skip this, per the adaptive quality tiers).
+  void _paintPresentationTrail(Canvas canvas) {
+    if (!visual.showTrail) return;
+    final source = visual.presentationSourceNode;
+    final position = visual.animatingBeadPosition;
+    if (source == null || position == null) return;
+    final from = visual.layout.positions[source];
+    if (from == null) return;
+
+    final paint = Paint()
+      ..color = visual.colorScheme.secondary.withValues(alpha: 0.35)
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(from, position, paint);
+  }
+
+  /// The bead being animated along the (already-validated) graph edge
+  /// between source and destination. Drawn identically to a resting piece
+  /// of the same side so it never "teleports": it is the same shape the
+  /// static piece will resume once the step finishes.
+  void _paintPresentationBead(Canvas canvas) {
+    final position = visual.animatingBeadPosition;
+    final side = visual.animatingBeadSide;
+    if (position == null || side == null) return;
+
+    final pieceRadius = visual.layout.nodeSpacing * 0.32;
+    final fillPaint = Paint()
+      ..color = side == Side.top ? topBeadColor : bottomBeadColor;
+    final borderPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.25)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawCircle(position, pieceRadius, fillPaint);
+    canvas.drawCircle(position, pieceRadius, borderPaint);
+    if (side == Side.bottom) {
+      final holePaint = Paint()
+        ..color = visual.colorScheme.surfaceContainerHigh;
+      canvas.drawCircle(position, pieceRadius * 0.42, holePaint);
     }
   }
 

@@ -2,9 +2,14 @@ import 'package:clock/clock.dart' as pkg_clock;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:twelve_beads/core/settings/settings_controller.dart';
+import 'package:twelve_beads/core/settings/settings_repository.dart';
 import 'package:twelve_beads/features/game/application/game_clock.dart';
+import 'package:twelve_beads/features/game/application/haptics_port.dart';
 import 'package:twelve_beads/features/game/application/match_config.dart';
 import 'package:twelve_beads/features/game/application/match_controller.dart';
+import 'package:twelve_beads/features/game/application/move_presentation_controller.dart';
 import 'package:twelve_beads/game/board/board_graph.dart';
 import 'package:twelve_beads/game/engine/game_action.dart';
 import 'package:twelve_beads/game/engine/game_state.dart';
@@ -17,6 +22,32 @@ class _AdapterClock implements GameClock {
   DateTime now() => _clock.now();
 }
 
+/// [HapticFeedback] requires a live Flutter binding (`ServicesBinding
+/// .instance`), which plain `test()` cases (as opposed to `testWidgets()`)
+/// never initialize. These controller-level unit tests shouldn't need a
+/// widget binding just to exercise game logic, so haptics are faked here —
+/// real haptics are covered by the widget-level tests instead.
+class _NoopHapticsPort implements HapticsPort {
+  @override
+  void selection() {}
+  @override
+  void move() {}
+  @override
+  void capture() {}
+  @override
+  void matchEnd() {}
+}
+
+/// MovePresentationController reads settings to size its animation timings,
+/// so every test container needs a real (in-memory) settings repository.
+/// `Override` isn't a publicly exported type in Riverpod 3.x, so this
+/// returns the repository itself and callers inline the overrides list
+/// (letting the `overrides:` parameter's type be inferred).
+Future<SettingsRepository> _createSettingsRepository() async {
+  SharedPreferences.setMockInitialValues({});
+  return SettingsRepository.create();
+}
+
 MatchConfig _config({int timerMinutes = 0}) => MatchConfig(
   playerOneName: 'Alice',
   playerTwoName: 'Bilal',
@@ -26,6 +57,11 @@ MatchConfig _config({int timerMinutes = 0}) => MatchConfig(
 );
 
 void main() {
+  // resolveReducedMotion()'s ReducedMotionPreference.system branch reads
+  // WidgetsBinding.instance (for the platform accessibility flag), which
+  // requires a bound Flutter binding even in these plain, non-widget tests.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('MatchUiState getters', () {
     test(
       'forcedCaptureActive is true only when every legal action is a capture',
@@ -93,11 +129,15 @@ void main() {
     late ProviderContainer container;
     late MatchConfig config;
 
-    setUp(() {
+    setUp(() async {
       config = _config();
+      final settingsRepository = await _createSettingsRepository();
       container = ProviderContainer(
         overrides: [
           gameClockProvider.overrideWithValue(const SystemGameClock()),
+          settingsRepositoryProvider.overrideWithValue(settingsRepository),
+          deviceLanguageCodeProvider.overrideWithValue('en'),
+          hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
         ],
       );
       container.listen(
@@ -172,6 +212,14 @@ void main() {
           ]),
         );
 
+        // Board input is correctly locked while the first move's
+        // presentation animation is still playing (no real time elapses in
+        // this synchronous test); simulate it having finished before the
+        // reply capture is tapped, same as BoardWidget would let happen.
+        container
+            .read(movePresentationControllerProvider(config).notifier)
+            .cancelAndSnapToFinal();
+
         notifier().onNodeTapped('r3c2');
         notifier().onNodeTapped('r1c2');
 
@@ -220,7 +268,8 @@ void main() {
   });
 
   group('MatchController — timer lifecycle', () {
-    test('the active side\'s clock counts down while playing', () {
+    test('the active side\'s clock counts down while playing', () async {
+      final settingsRepository = await _createSettingsRepository();
       fakeAsync((async) {
         final config = _config(timerMinutes: 1);
         final container = ProviderContainer(
@@ -228,6 +277,9 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
+            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            deviceLanguageCodeProvider.overrideWithValue('en'),
+            hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
           ],
         );
         addTearDown(container.dispose);
@@ -254,7 +306,8 @@ void main() {
       });
     });
 
-    test('pausing freezes the clock; resuming continues it', () {
+    test('pausing freezes the clock; resuming continues it', () async {
+      final settingsRepository = await _createSettingsRepository();
       fakeAsync((async) {
         final config = _config(timerMinutes: 1);
         final container = ProviderContainer(
@@ -262,6 +315,9 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
+            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            deviceLanguageCodeProvider.overrideWithValue('en'),
+            hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
           ],
         );
         addTearDown(container.dispose);
@@ -297,7 +353,8 @@ void main() {
       });
     });
 
-    test('reaching zero applies a Timeout and ends the match', () {
+    test('reaching zero applies a Timeout and ends the match', () async {
+      final settingsRepository = await _createSettingsRepository();
       fakeAsync((async) {
         final config = _config(timerMinutes: 1);
         final container = ProviderContainer(
@@ -305,6 +362,9 @@ void main() {
             gameClockProvider.overrideWithValue(
               _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
             ),
+            settingsRepositoryProvider.overrideWithValue(settingsRepository),
+            deviceLanguageCodeProvider.overrideWithValue('en'),
+            hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
           ],
         );
         addTearDown(container.dispose);

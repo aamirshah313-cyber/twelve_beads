@@ -9,10 +9,7 @@ import '../../../game/engine/rules_engine.dart';
 import '../../../game/engine/side.dart';
 import 'game_clock.dart';
 import 'match_config.dart';
-
-/// Overridden in tests to inject a fake [GameClock]; production uses the
-/// real system clock.
-final gameClockProvider = Provider<GameClock>((ref) => const SystemGameClock());
+import 'move_presentation_controller.dart';
 
 /// Immutable UI-facing snapshot of a local match in progress.
 class MatchUiState {
@@ -118,6 +115,10 @@ class MatchController extends Notifier<MatchUiState> {
 
   void onNodeTapped(NodeId node) {
     if (state.isPaused || state.gameState.phase != GamePhase.playing) return;
+    // Defense in depth: BoardWidget already disables its tap targets while
+    // a presentation animation is playing, but the domain-adjacent
+    // controller must not accept conflicting input either way.
+    if (ref.read(movePresentationControllerProvider(config)).isPlaying) return;
 
     final legal = state.legalActions;
 
@@ -146,11 +147,13 @@ class MatchController extends Notifier<MatchUiState> {
 
   void resign(Side side) {
     if (state.gameState.phase != GamePhase.playing) return;
+    _cancelPresentation();
     _applyAndUpdate(ResignAction(side));
   }
 
   void undo() {
     if (!state.canUndo) return;
+    _cancelPresentation();
     _freezeClocksIntoState();
 
     final newLog = state.actionLog.sublist(0, state.actionLog.length - 1);
@@ -181,6 +184,7 @@ class MatchController extends Notifier<MatchUiState> {
 
   void pause() {
     if (state.isPaused || state.gameState.phase != GamePhase.playing) return;
+    _cancelPresentation();
     _freezeClocksIntoState();
     _cancelTimer();
     state = _withPaused(true);
@@ -194,6 +198,7 @@ class MatchController extends Notifier<MatchUiState> {
   }
 
   void restart() {
+    _cancelPresentation();
     _cancelTimer();
     _armedAt = null;
     _armedSide = null;
@@ -211,6 +216,7 @@ class MatchController extends Notifier<MatchUiState> {
   void _applyAndUpdate(GameAction action) {
     _freezeClocksIntoState();
 
+    final piecesBefore = state.gameState.pieces;
     final outcome = apply(
       state.gameState,
       action,
@@ -239,6 +245,23 @@ class MatchController extends Notifier<MatchUiState> {
       _armClock(outcome.state.turn);
       _startTimer();
     }
+
+    // Only Move/Capture describe an actual board transition to animate;
+    // Resign/Timeout have no source/destination to play back.
+    if (action is MoveAction || action is CaptureAction) {
+      ref
+          .read(movePresentationControllerProvider(config).notifier)
+          .enqueue(piecesBefore, outcome.event);
+    }
+    if (outcome.state.phase == GamePhase.finished) {
+      ref.read(hapticsPortProvider).matchEnd();
+    }
+  }
+
+  void _cancelPresentation() {
+    ref
+        .read(movePresentationControllerProvider(config).notifier)
+        .cancelAndSnapToFinal();
   }
 
   MatchUiState _withSelection(NodeId? node) => MatchUiState(
