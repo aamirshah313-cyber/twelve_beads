@@ -28,7 +28,8 @@
   "timerOff": "بند",
   "startMatchButton": "میچ شروع کریں",
   "engineNotReadyMessage": "میچ کا انجن ابھی تیار نہیں ہوا — یہ بعد کے مرحلے میں شامل کیا جائے گا۔ آپ کی ترتیبات محفوظ کر لی گئی ہیں۔",
-  "machineNotReadyMessage": "کمپیوٹر حریف ابھی تیار نہیں ہوا — یہ بعد کے مرحلے میں شامل کیا جائے گا۔ آپ کی ترتیبات محفوظ کر لی گئی ہیں۔",
+  "machineOpponentName": "مشین",
+  "machineThinkingLabel": "مشین سوچ رہی ہے…",
 
   "matchScreenTitle": "میچ",
   "turnBanner": "{name} کی باری",

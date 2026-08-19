@@ -254,11 +254,17 @@ abstract class AppLocalizations {
   /// **'The match engine isn\'t built yet — that\'s a later phase. Your setup has been saved.'**
   String get engineNotReadyMessage;
 
-  /// No description provided for @machineNotReadyMessage.
+  /// No description provided for @machineOpponentName.
   ///
   /// In en, this message translates to:
-  /// **'The computer opponent isn\'t built yet — that\'s a later phase. Your setup has been saved.'**
-  String get machineNotReadyMessage;
+  /// **'Machine'**
+  String get machineOpponentName;
+
+  /// No description provided for @machineThinkingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Machine is thinking…'**
+  String get machineThinkingLabel;
 
   /// No description provided for @matchScreenTitle.
   ///

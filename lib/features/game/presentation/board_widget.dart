@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../game/board/board_graph.dart';
 import '../../../game/engine/game_action.dart';
 import '../../../game/engine/side.dart';
+import '../application/machine_controller.dart';
 import '../application/match_config.dart';
 import '../application/match_controller.dart';
 import '../application/move_presentation_controller.dart';
@@ -36,6 +37,9 @@ class BoardWidget extends ConsumerWidget {
     final matchState = ref.watch(matchControllerProvider(config));
     final controller = ref.read(matchControllerProvider(config).notifier);
     final presentation = ref.watch(movePresentationControllerProvider(config));
+    final machineThinking = ref
+        .watch(machineControllerProvider(config))
+        .isThinking;
     final settings = ref.watch(settingsControllerProvider);
     final l10n = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
@@ -94,7 +98,7 @@ class BoardWidget extends ConsumerWidget {
           children: [
             Positioned.fill(child: CustomPaint(painter: BoardPainter(visual))),
             IgnorePointer(
-              ignoring: presentation.isPlaying,
+              ignoring: presentation.isPlaying || machineThinking,
               child: Stack(
                 children: [
                   for (final entry in layout.positions.entries)

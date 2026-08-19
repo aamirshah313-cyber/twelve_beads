@@ -145,6 +145,21 @@ class MatchController extends Notifier<MatchUiState> {
     }
   }
 
+  /// Applies an action chosen outside of direct board taps — currently only
+  /// the machine opponent (Phase 5). Goes through the exact same
+  /// validation and presentation-timeline wiring as [onNodeTapped]; the
+  /// caller is responsible for having derived [action] from this match's
+  /// own [MatchUiState.legalActions] (typically via [MachineController]),
+  /// never from a separate/stale computation.
+  bool applyExternalAction(GameAction action) {
+    if (state.isPaused || state.gameState.phase != GamePhase.playing) {
+      return false;
+    }
+    if (!isLegal(state.gameState, action)) return false;
+    _applyAndUpdate(action);
+    return true;
+  }
+
   void resign(Side side) {
     if (state.gameState.phase != GamePhase.playing) return;
     _cancelPresentation();

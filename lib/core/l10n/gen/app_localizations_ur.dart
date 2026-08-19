@@ -91,8 +91,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'میچ کا انجن ابھی تیار نہیں ہوا — یہ بعد کے مرحلے میں شامل کیا جائے گا۔ آپ کی ترتیبات محفوظ کر لی گئی ہیں۔';
 
   @override
-  String get machineNotReadyMessage =>
-      'کمپیوٹر حریف ابھی تیار نہیں ہوا — یہ بعد کے مرحلے میں شامل کیا جائے گا۔ آپ کی ترتیبات محفوظ کر لی گئی ہیں۔';
+  String get machineOpponentName => 'مشین';
+
+  @override
+  String get machineThinkingLabel => 'مشین سوچ رہی ہے…';
 
   @override
   String get matchScreenTitle => 'میچ';

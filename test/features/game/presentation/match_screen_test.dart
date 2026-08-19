@@ -8,6 +8,7 @@ import 'package:twelve_beads/core/settings/settings_repository.dart';
 import 'package:twelve_beads/features/game/application/match_config.dart';
 import 'package:twelve_beads/features/game/presentation/board_widget.dart';
 import 'package:twelve_beads/features/game/presentation/match_screen.dart';
+import 'package:twelve_beads/game/ai/difficulty.dart';
 import 'package:twelve_beads/game/board/board_graph.dart';
 import 'package:twelve_beads/features/game/presentation/board_layout.dart';
 import 'package:twelve_beads/game/engine/side.dart';
@@ -18,6 +19,16 @@ MatchConfig _config() => const MatchConfig(
   playerOneSide: Side.top,
   firstTurn: Side.top,
   timerMinutes: 0,
+);
+
+MatchConfig _vsMachineConfig() => const MatchConfig(
+  playerOneName: 'Alice',
+  playerTwoName: 'Machine',
+  playerOneSide: Side.top,
+  firstTurn: Side.top,
+  timerMinutes: 0,
+  machineSide: Side.bottom,
+  difficulty: Difficulty.easy,
 );
 
 /// Taps a board node, then flushes both the immediate state change and any
@@ -36,7 +47,7 @@ Future<void> _tapNode(WidgetTester tester, NodeId node) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
-Future<Widget> _app() async {
+Future<Widget> _app({MatchConfig? config}) async {
   SharedPreferences.setMockInitialValues({});
   final settingsRepository = await SettingsRepository.create();
   return ProviderScope(
@@ -47,7 +58,7 @@ Future<Widget> _app() async {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: MatchScreen(config: _config()),
+      home: MatchScreen(config: config ?? _config()),
     ),
   );
 }
@@ -187,6 +198,31 @@ void main() {
       await tester.tap(find.text('Restart').last);
       await tester.pumpAndSettle();
 
+      expect(find.text("Alice's turn"), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'vs-Machine match: after the human moves, the machine automatically '
+    'thinks then replies without further input',
+    (tester) async {
+      await tester.pumpWidget(await _app(config: _vsMachineConfig()));
+      await tester.pumpAndSettle();
+
+      await _tapNode(tester, 'r1c2');
+      await _tapNode(tester, 'r2c2');
+
+      // The machine (bottom) now replies on its own, with no further
+      // test-driven taps: flush its bounded thinking delay plus its own
+      // move's presentation animation. Precise thinking-indicator timing is
+      // covered deterministically at the controller level
+      // (machine_controller_test.dart); this test only confirms the full
+      // human-move → machine-reply round trip is wired up end to end and
+      // doesn't get stuck.
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.textContaining('Machine is thinking'), findsNothing);
       expect(find.text("Alice's turn"), findsOneWidget);
     },
   );

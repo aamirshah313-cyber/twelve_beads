@@ -34,7 +34,8 @@
   "timerOff": "Off",
   "startMatchButton": "Start Match",
   "engineNotReadyMessage": "The match engine isn't built yet — that's a later phase. Your setup has been saved.",
-  "machineNotReadyMessage": "The computer opponent isn't built yet — that's a later phase. Your setup has been saved.",
+  "machineOpponentName": "Machine",
+  "machineThinkingLabel": "Machine is thinking…",
 
   "matchScreenTitle": "Match",
   "turnBanner": "{name}'s turn",

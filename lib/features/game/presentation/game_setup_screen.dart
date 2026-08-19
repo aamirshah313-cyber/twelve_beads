@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/settings/settings_controller.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../game/ai/difficulty.dart' as ai;
 import '../../../game/engine/side.dart';
 import '../application/match_config.dart';
 import 'match_screen.dart';
@@ -16,10 +17,18 @@ enum _FirstTurn { random, playerOne, playerTwo }
 
 enum _Difficulty { easy, medium, difficult }
 
-/// Pre-game configuration screen ("New Match"). Two-player mode launches a
-/// real match via [MatchScreen] against the Phase 2 engine. Vs-Machine mode
-/// still reports honestly that no AI opponent exists yet — that's a later
-/// phase — rather than pretending a match exists.
+extension on _Difficulty {
+  ai.Difficulty toEngineDifficulty() => switch (this) {
+    _Difficulty.easy => ai.Difficulty.easy,
+    _Difficulty.medium => ai.Difficulty.medium,
+    _Difficulty.difficult => ai.Difficulty.difficult,
+  };
+}
+
+/// Pre-game configuration screen ("New Match"). Both two-player and
+/// vs-Machine modes launch a real match via [MatchScreen]; vs-Machine wires
+/// in [MatchConfig.machineSide]/[MatchConfig.difficulty], which
+/// `MachineController` (Phase 5) picks up to drive the offline opponent.
 class GameSetupScreen extends ConsumerStatefulWidget {
   const GameSetupScreen({super.key});
 
@@ -188,12 +197,6 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
   }
 
   void _startMatch(BuildContext context, AppLocalizations l10n) {
-    if (_mode == _MatchMode.vsMachine) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.machineNotReadyMessage)));
-      return;
-    }
-
     final firstTurn = switch (_firstTurn) {
       _FirstTurn.playerOne => Side.top,
       _FirstTurn.playerTwo => Side.bottom,
@@ -203,9 +206,11 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
     final playerOneName = _playerOneController.text.trim().isEmpty
         ? l10n.firstTurnPlayerOne
         : _playerOneController.text.trim();
-    final playerTwoName = _playerTwoController.text.trim().isEmpty
-        ? l10n.firstTurnPlayerTwo
-        : _playerTwoController.text.trim();
+    final playerTwoName = _mode == _MatchMode.vsMachine
+        ? l10n.machineOpponentName
+        : (_playerTwoController.text.trim().isEmpty
+              ? l10n.firstTurnPlayerTwo
+              : _playerTwoController.text.trim());
 
     final config = MatchConfig(
       playerOneName: playerOneName,
@@ -213,6 +218,8 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
       playerOneSide: Side.top,
       firstTurn: firstTurn,
       timerMinutes: _timerMinutes,
+      machineSide: _mode == _MatchMode.vsMachine ? Side.bottom : null,
+      difficulty: _difficulty.toEngineDifficulty(),
     );
 
     Navigator.of(context)

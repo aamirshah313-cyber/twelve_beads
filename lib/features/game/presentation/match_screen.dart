@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../game/board/board_graph.dart';
 import '../../../game/engine/game_state.dart';
 import '../../../game/engine/side.dart';
+import '../application/machine_controller.dart';
 import '../application/match_config.dart';
 import '../application/match_controller.dart';
 import '../application/move_presentation_controller.dart';
@@ -68,6 +69,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
       widget.config,
     );
     final presentation = ref.watch(presentationProvider);
+    final machineProvider = machineControllerProvider(widget.config);
+    final isMachineThinking = ref.watch(machineProvider).isThinking;
+
+    ref.listen(machineProvider, (previous, next) {
+      if (!(previous?.isThinking ?? false) && next.isThinking) {
+        final direction = Directionality.of(context);
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          l10n.machineThinkingLabel,
+          direction,
+        );
+      }
+    });
 
     ref.listen(provider, (previous, next) {
       if (next.gameState.phase == GamePhase.finished && !_dialogShown) {
@@ -135,11 +149,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                         config: widget.config,
                         state: matchState,
                         presentation: presentation,
+                        isMachineThinking: isMachineThinking,
                       )
                     : _PortraitMatchLayout(
                         config: widget.config,
                         state: matchState,
                         presentation: presentation,
+                        isMachineThinking: isMachineThinking,
                       );
               },
             ),
@@ -324,17 +340,24 @@ class _PortraitMatchLayout extends StatelessWidget {
     required this.config,
     required this.state,
     required this.presentation,
+    required this.isMachineThinking,
   });
 
   final MatchConfig config;
   final MatchUiState state;
   final MovePresentationState presentation;
+  final bool isMachineThinking;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _TurnBanner(config: config, state: state, presentation: presentation),
+        _TurnBanner(
+          config: config,
+          state: state,
+          presentation: presentation,
+          isMachineThinking: isMachineThinking,
+        ),
         _PlayerRail(config: config, state: state, side: Side.top),
         Expanded(
           child: Padding(
@@ -358,11 +381,13 @@ class _LandscapeMatchLayout extends StatelessWidget {
     required this.config,
     required this.state,
     required this.presentation,
+    required this.isMachineThinking,
   });
 
   final MatchConfig config;
   final MatchUiState state;
   final MovePresentationState presentation;
+  final bool isMachineThinking;
 
   @override
   Widget build(BuildContext context) {
@@ -381,6 +406,7 @@ class _LandscapeMatchLayout extends StatelessWidget {
                 config: config,
                 state: state,
                 presentation: presentation,
+                isMachineThinking: isMachineThinking,
               ),
               Expanded(
                 child: Padding(
@@ -412,11 +438,13 @@ class _TurnBanner extends StatelessWidget {
     required this.config,
     required this.state,
     required this.presentation,
+    required this.isMachineThinking,
   });
 
   final MatchConfig config;
   final MatchUiState state;
   final MovePresentationState presentation;
+  final bool isMachineThinking;
 
   @override
   Widget build(BuildContext context) {
@@ -456,7 +484,32 @@ class _TurnBanner extends StatelessWidget {
                   ),
                 ),
               ),
-            if (state.forcedCaptureActive && !presentation.isPlaying)
+            if (isMachineThinking && !presentation.isPlaying)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Semantics(
+                  liveRegion: true,
+                  label: l10n.machineThinkingLabel,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        l10n.machineThinkingLabel,
+                        style: textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (state.forcedCaptureActive &&
+                !presentation.isPlaying &&
+                !isMachineThinking)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
                 child: Text(

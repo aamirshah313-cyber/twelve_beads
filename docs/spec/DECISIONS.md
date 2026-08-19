@@ -61,3 +61,39 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
   - Node numbering starts at row 0 / column 0 internally (`r{row}c{col}`,
     per `board_graph.dart`); screen-reader announcements add 1 for the
     1-indexed "row X, column Y" phrasing humans expect.
+- Phase 5 scope notes:
+  - The machine opponent is a pure-Dart negamax/alpha-beta search
+    (`lib/game/ai/`) that only ever consults `legalActions`/`apply` from
+    the shared rules engine — it has no privileged view of the board and
+    cannot bypass mandatory capture, chain-capture continuation, or any
+    other rule a human player is bound by. Easy picks uniformly at random
+    among legal actions (weighted toward captures only in the sense that a
+    forced-capture position has no non-capture actions to pick from).
+    Medium is a fixed-depth-3 search. Difficult is iterative deepening
+    with a ~1.2s wall-clock time budget, alpha-beta pruning, move
+    ordering, and a transposition table.
+  - Medium/Difficult search runs via `Isolate.run` so a non-trivial search
+    never blocks the UI isolate; Easy resolves synchronously since it's
+    cheap. The dispatch point (`machineComputeProvider`) is a Riverpod
+    provider so tests can override it with a fast synchronous fake and
+    avoid paying real isolate spawn/timing costs — the search algorithm
+    itself is covered separately and directly in `test/game/ai`.
+  - `MachineController` adds an artificial minimum "thinking" delay
+    (~450-700ms, jittered; ~60ms under reduced motion) before applying a
+    machine move, purely so the opponent doesn't feel instant/robotic on
+    Easy — this is deliberately separate from actual search time. Any
+    match-state change (human move, pause, resume, restart, resign) bumps
+    a monotonic generation counter; a stale delay or search result that
+    resolves after the generation has moved on is discarded rather than
+    applied, which avoids needing true isolate preemption.
+  - The machine's chosen action is applied through
+    `MatchController.applyExternalAction`, which re-validates legality via
+    `isLegal` before applying — the same guard a human's tap goes through
+    — and feeds the exact same `MovePresentationController` timeline used
+    for human moves, so opponent-move visualization (Phase 4) works
+    identically regardless of who moved.
+  - The machine's display name (`machineOpponentName`, localized) is set
+    as `MatchConfig.playerTwoName` at match-setup time rather than being
+    special-cased anywhere in the match/board widgets — `nameForSide()`
+    and everything built on it (turn banner, player rail, dialogs,
+    announcements) needed no changes to support vs-Machine matches.

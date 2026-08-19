@@ -91,8 +91,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The match engine isn\'t built yet — that\'s a later phase. Your setup has been saved.';
 
   @override
-  String get machineNotReadyMessage =>
-      'The computer opponent isn\'t built yet — that\'s a later phase. Your setup has been saved.';
+  String get machineOpponentName => 'Machine';
+
+  @override
+  String get machineThinkingLabel => 'Machine is thinking…';
 
   @override
   String get matchScreenTitle => 'Match';
