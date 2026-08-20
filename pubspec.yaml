@@ -1,5 +1,5 @@
 name: twelve_beads
-description: "A new Flutter project."
+description: "Twelve Beads / بارہ گوٹی — an offline, local-only Alquerque-family board game with a two-player pass-and-play mode and a three-difficulty offline AI opponent."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

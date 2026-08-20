@@ -208,3 +208,47 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
     name at a large text-scale factor could overflow the `Row` (no
     `Flexible`/ellipsis previously) — wrapped the name in
     `Flexible(overflow: TextOverflow.ellipsis)`.
+- Phase 8 scope notes (release validation):
+  - **Known limitation, not silently skipped**: the sandbox this app was
+    developed in has an outbound-network allowlist that does not include
+    `dl.google.com` (confirmed via the sandbox's own proxy status
+    endpoint reporting a policy-denied `403` on that host), and no
+    Android SDK was pre-installed. `flutter build apk --release` /
+    `flutter build appbundle --release` were therefore never actually
+    executed there — everything Android-SDK-independent was: `flutter
+    analyze`, the full test suite, and a manual audit of
+    `AndroidManifest.xml`/`build.gradle.kts`. Running the two build
+    commands on a machine with a normal Android SDK install is the one
+    remaining verification step; see the README's "Release builds" note.
+  - Manifest audit: the release manifest
+    (`android/app/src/main/AndroidManifest.xml`) declares zero
+    `<uses-permission>` entries — confirmed by reading the file, not
+    inferred. `debug`/`profile` source sets each add `INTERNET`, which is
+    standard Flutter tooling (hot reload/DevTools) and doesn't reach a
+    release build. Fixed `android:label` from the raw package-style
+    string `"twelve_beads"` to the actual display name `"Twelve Beads"`.
+  - `compileSdk`/`targetSdk`/`minSdk` are left reading the installed
+    Flutter SDK's own defaults (`flutter.compileSdkVersion` etc. in
+    `build.gradle.kts`) rather than hardcoded, so the toolchain choice
+    stays current automatically, per "use the current stable Flutter/
+    Android Gradle toolchain." Recorded what that resolved to (36/36/24)
+    in the README, per "record exact decisions in README."
+  - The launcher icon was still the default Flutter template logo.
+    Replaced it with a small procedurally-generated icon (Python/Pillow,
+    not part of the app's own build) using the exact same bead colors
+    and shape-differentiation (solid vs. ring-punched) as the in-game
+    pieces, at all five legacy mipmap densities — a placeholder
+    consistent with the app's own visual language, not final brand art.
+  - Match finalization (`MatchController._finalizeMatch`) writes to
+    three separate `SharedPreferences`-backed repositories (match
+    history, profile stats, saved-game clear) sequentially, not inside
+    one atomic transaction — `SharedPreferences` has no cross-key
+    transaction primitive to wrap them in. A crash in the narrow window
+    between these writes could leave one of the three not yet updated,
+    but never corrupt: each repository's own stored value is always a
+    complete, independently-valid JSON document (never a partial write),
+    and every repository already discards/recovers from malformed data
+    on load. Accepted as a reasonable trade-off for a local casual game
+    with no competitive stakes in its history, per
+    07-android-quality-security-and-release.md's own framing ("do not
+    trust client-side history as competitive proof").
