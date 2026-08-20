@@ -78,9 +78,13 @@ see [Android app signing](https://developer.android.com/studio/publish/app-signi
 > there and `flutter build apk/appbundle` was never actually executed in
 > that environment. Everything Android-build-independent — `flutter
 > analyze`, the full unit/widget test suite, and the AndroidManifest/Gradle
-> configuration itself — was verified there. Running the two commands above
-> on a machine with a normal Android SDK install is the remaining
-> verification step before a release artifact is cut.
+> configuration itself — was verified there. **`.github/workflows/ci.yml`
+> builds a real release APK/AAB and a debug APK on every push**, on
+> GitHub's own hosted runners (which have a normal Android SDK
+> preinstalled) — open the workflow run under the repo's **Actions** tab
+> and download the `twelve-beads-apk` / `twelve-beads-appbundle` artifacts
+> from its summary page to get an installable APK without needing a local
+> Android SDK at all.
 
 ## Android configuration
 
@@ -145,13 +149,15 @@ flow, per the test pyramid in `08-testing-and-delivery-plan.md`.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push to `main` and every pull
-request: `flutter analyze`, a `dart format` check, a check that
-`lib/core/l10n/gen/` is up to date with `lib/core/l10n/arb/*.arb`, the full
-test suite, and (in a second job) a release APK + App Bundle build — the
-release build only runs on GitHub's hosted runners, not in the sandboxed
-environment this app was originally developed in (see **Release builds**
-above).
+`.github/workflows/ci.yml` runs on every push, every pull request, and can
+also be triggered manually from the Actions tab
+(`workflow_dispatch`): `flutter analyze`, a `dart format` check, a check
+that `lib/core/l10n/gen/` is up to date with
+`lib/core/l10n/arb/*.arb`, the full test suite, and (in a second job) a
+release APK, a release App Bundle, and a debug APK build, each uploaded as
+a downloadable workflow artifact — the release build only runs on GitHub's
+hosted runners, not in the sandboxed environment this app was originally
+developed in (see **Release builds** above).
 
 ## Documentation
 
