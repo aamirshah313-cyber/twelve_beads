@@ -265,6 +265,34 @@ void main() {
     },
   );
 
+  testWidgets(
+    'the match screen renders without overflow on a small-phone-sized '
+    'surface (07-android-quality-security-and-release.md device matrix)',
+    (tester) async {
+      // A common small/low-end Android portrait size (e.g. a 480x800 or
+      // similarly compact device at its logical resolution).
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(await _app());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'the match screen renders without overflow on a tablet-sized landscape '
+    'surface (07-android-quality-security-and-release.md device matrix)',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(await _app());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('high contrast changes the bead fill color used for painting', (
     tester,
   ) async {

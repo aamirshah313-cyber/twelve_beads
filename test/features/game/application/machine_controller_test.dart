@@ -14,6 +14,7 @@ import 'package:twelve_beads/features/game/application/match_controller.dart';
 import 'package:twelve_beads/features/game/application/move_presentation_controller.dart';
 import 'package:twelve_beads/features/game/application/saved_game_controller.dart';
 import 'package:twelve_beads/game/ai/difficulty.dart';
+import 'package:twelve_beads/game/ai/machine_player.dart';
 import 'package:twelve_beads/game/engine/game_action.dart';
 import 'package:twelve_beads/game/engine/game_state.dart';
 import 'package:twelve_beads/game/engine/rules_engine.dart';
@@ -63,6 +64,7 @@ Future<GameAction> _firstLegalActionCompute({
   required GameState state,
   required Difficulty difficulty,
   required int seed,
+  required Duration difficultTimeBudget,
 }) async {
   return legalActions(state).first;
 }
@@ -315,8 +317,12 @@ void main() {
               // easy-path shape, but here we just verify applyExternalAction
               // rejects illegal input, using a deliberately-illegal fake.
               machineComputeProvider.overrideWithValue(
-                ({required state, required difficulty, required seed}) async =>
-                    const MoveAction(from: 'r0c0', to: 'r0c0'),
+                ({
+                  required state,
+                  required difficulty,
+                  required seed,
+                  required difficultTimeBudget,
+                }) async => const MoveAction(from: 'r0c0', to: 'r0c0'),
               ),
               machineRandomSeedProvider.overrideWithValue(() => 1),
             ],
@@ -392,6 +398,118 @@ void main() {
           1,
           reason: 'reduced motion should skip the artificial thinking delay',
         );
+      });
+    });
+
+    test('Low visual quality shortens the Difficult search time budget passed '
+        'to compute (07-android-quality-security-and-release.md: node/time '
+        'budgets bounded per device quality)', () {
+      fakeAsync((async) {
+        final config = _vsMachineConfig(
+          machineSide: Side.top,
+          difficulty: Difficulty.difficult,
+        );
+        Duration? capturedBudget;
+        Future<GameAction> spyCompute({
+          required GameState state,
+          required Difficulty difficulty,
+          required int seed,
+          required Duration difficultTimeBudget,
+        }) async {
+          capturedBudget = difficultTimeBudget;
+          return legalActions(state).first;
+        }
+
+        final container = ProviderContainer(
+          overrides: [
+            gameClockProvider.overrideWithValue(
+              _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
+            ),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
+            deviceLanguageCodeProvider.overrideWithValue('en'),
+            hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
+            machineComputeProvider.overrideWithValue(spyCompute),
+            machineRandomSeedProvider.overrideWithValue(() => 1),
+          ],
+        );
+        addTearDown(container.dispose);
+        container
+            .read(settingsControllerProvider.notifier)
+            .setVisualQuality(VisualQuality.low);
+        container.listen(
+          matchControllerProvider(config),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        container.listen(
+          machineControllerProvider(config),
+          (_, _) {},
+          fireImmediately: true,
+        );
+
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 1));
+
+        expect(capturedBudget, const Duration(milliseconds: 500));
+      });
+    });
+
+    test('Standard (the default) visual quality keeps the full Difficult '
+        'search time budget', () {
+      fakeAsync((async) {
+        final config = _vsMachineConfig(
+          machineSide: Side.top,
+          difficulty: Difficulty.difficult,
+        );
+        Duration? capturedBudget;
+        Future<GameAction> spyCompute({
+          required GameState state,
+          required Difficulty difficulty,
+          required int seed,
+          required Duration difficultTimeBudget,
+        }) async {
+          capturedBudget = difficultTimeBudget;
+          return legalActions(state).first;
+        }
+
+        final container = ProviderContainer(
+          overrides: [
+            gameClockProvider.overrideWithValue(
+              _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
+            ),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
+            deviceLanguageCodeProvider.overrideWithValue('en'),
+            hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
+            machineComputeProvider.overrideWithValue(spyCompute),
+            machineRandomSeedProvider.overrideWithValue(() => 1),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.listen(
+          matchControllerProvider(config),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        container.listen(
+          machineControllerProvider(config),
+          (_, _) {},
+          fireImmediately: true,
+        );
+
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 1));
+
+        expect(capturedBudget, defaultDifficultTimeBudget);
       });
     });
   });

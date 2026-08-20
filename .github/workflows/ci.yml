@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Keep this in sync with pubspec.yaml's `environment: sdk:` constraint and
+# README.md's Flutter version note — this pins the exact stable version this
+# app was built and verified against (07-android-quality-security-and-
+# release.md: "Use the current stable Flutter/Android Gradle toolchain at
+# implementation time").
+env:
+  FLUTTER_VERSION: '3.47.0'
+
+jobs:
+  analyze-and-test:
+    name: Analyze, format check, and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - run: flutter pub get
+
+      # lib/core/l10n/gen/ is committed (see README's "Getting started"),
+      # so verify it's actually up to date with lib/core/l10n/arb/*.arb
+      # rather than trusting a stale commit.
+      - run: flutter gen-l10n
+      - run: git diff --exit-code -- lib/core/l10n/gen
+
+      - run: dart format --output=none --set-exit-if-changed .
+
+      - run: flutter analyze
+
+      - run: flutter test
+
+  build-release:
+    name: Build release APK and App Bundle
+    runs-on: ubuntu-latest
+    needs: analyze-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - run: flutter pub get
+
+      # android/app/build.gradle.kts currently signs release builds with the
+      # debug key (see README's "Release builds" note), so this needs no
+      # signing secrets. Swap in a real upload keystore before a Play Store
+      # submission — this step only validates the build itself stays green.
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release

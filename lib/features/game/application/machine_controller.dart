@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/settings_controller.dart';
 import '../../../game/ai/difficulty.dart';
 import '../../../game/ai/machine_player.dart';
@@ -13,6 +14,18 @@ import 'game_clock.dart';
 import 'match_config.dart';
 import 'match_controller.dart';
 import 'move_presentation_controller.dart';
+
+/// 07-android-quality-security-and-release.md calls for AI search node/time
+/// budgets to be bounded per device quality, not just per difficulty. This
+/// app has no real device-capability probe, so [VisualQuality] (already a
+/// user-facing proxy for "how much this device/session can spend on visual
+/// effects," per 04-ui-ux-and-visual-system.md) doubles as that signal: Low
+/// gets a shorter [Difficulty.difficult] search budget so a weak device
+/// stays responsive, Standard/Auto/High keep the existing default.
+Duration difficultTimeBudgetFor(VisualQuality quality) =>
+    quality == VisualQuality.low
+    ? const Duration(milliseconds: 500)
+    : defaultDifficultTimeBudget;
 
 /// Seed source for the machine's [Random] instances. Overridden in tests for
 /// deterministic behavior; production draws fresh entropy per move.
@@ -25,6 +38,7 @@ typedef MachineComputeFn = Future<GameAction> Function({
   required GameState state,
   required Difficulty difficulty,
   required int seed,
+  required Duration difficultTimeBudget,
 });
 
 /// Runs the actual search. Medium/Difficult go through [Isolate.run] so the
@@ -41,6 +55,7 @@ Future<GameAction> _defaultCompute({
   required GameState state,
   required Difficulty difficulty,
   required int seed,
+  required Duration difficultTimeBudget,
 }) {
   if (difficulty == Difficulty.easy) {
     return Future.value(
@@ -56,6 +71,7 @@ Future<GameAction> _defaultCompute({
       state: state,
       difficulty: difficulty,
       random: Random(seed),
+      difficultTimeBudget: difficultTimeBudget,
     ),
   );
 }
@@ -144,6 +160,7 @@ class MachineController extends Notifier<MachineControllerState> {
           state: matchStateAtStart.gameState,
           difficulty: config.difficulty,
           seed: seed,
+          difficultTimeBudget: difficultTimeBudgetFor(settings.visualQuality),
         )
         .then((action) async {
           if (myGeneration != _generation) {

@@ -143,6 +143,16 @@ The suite spans pure-Dart engine/AI unit tests, Riverpod controller tests
 tests), and full widget tests for every screen and the human↔machine move
 flow, per the test pyramid in `08-testing-and-delivery-plan.md`.
 
+## CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull
+request: `flutter analyze`, a `dart format` check, a check that
+`lib/core/l10n/gen/` is up to date with `lib/core/l10n/arb/*.arb`, the full
+test suite, and (in a second job) a release APK + App Bundle build — the
+release build only runs on GitHub's hosted runners, not in the sandboxed
+environment this app was originally developed in (see **Release builds**
+above).
+
 ## Documentation
 
 - `00-master-claude-code-prompt.md` through `08-testing-and-delivery-plan.md`

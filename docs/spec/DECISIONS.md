@@ -335,3 +335,38 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
     consequence, unlike the display name (which appears in quick chat,
     match history, and the turn banner) — a deliberate scope line, not
     an oversight.
+  - **Fifth and sixth gaps, found doing a targeted pass against 05 and
+    07 specifically** (rather than the earlier line-by-line pass across
+    all nine documents): 05-ai-and-gameplay-systems.md's evaluation
+    section calls for AI node/time budgets "bound ... per device
+    quality," and separately 07's "Release validation" section opens
+    with "`flutter analyze`, formatting, unit/widget/integration
+    suites, and release build must pass in CI" — neither existed.
+    - `Difficulty.difficult`'s iterative-deepening search always used
+      the same fixed ~1.2s time budget regardless of the device. Since
+      this app has no real device-capability probe, `VisualQuality`
+      (already the user-facing proxy for "how much this
+      device/session can spend," per 04) doubles as that signal:
+      `difficultTimeBudgetFor()` in `machine_controller.dart` now
+      gives `VisualQuality.low` a 500ms budget and leaves
+      Standard/Auto/High at the existing 1.2s default. Plumbing this
+      through required adding a `difficultTimeBudget` parameter to
+      `MachineComputeFn` (the seam that already carries `seed` across
+      the `Isolate.run` boundary for the same reason: a spawned
+      isolate can't read `ref`/settings itself, so the value has to be
+      resolved on the calling side and passed in as plain data).
+    - Added `.github/workflows/ci.yml`: one job running
+      `flutter pub get` → `flutter gen-l10n` + `git diff --exit-code`
+      (catches committed `lib/core/l10n/gen/` drifting from the
+      `.arb` sources) → `dart format --set-exit-if-changed .` →
+      `flutter analyze` → `flutter test`, and a second job building
+      the release APK and App Bundle (no signing secrets needed, since
+      release currently signs with the debug key — see the README's
+      "Release builds" note). This workflow could not actually be
+      exercised inside this project's own development sandbox, whose
+      network policy blocks `dl.google.com` (see the Phase 8 note
+      above) — GitHub Actions' hosted runners have normal internet
+      access and a preinstalled Android SDK, so it should run for
+      real the first time this branch is pushed or a PR is opened
+      against it, which is the first opportunity to confirm it
+      actually passes end-to-end.
