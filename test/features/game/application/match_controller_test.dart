@@ -545,6 +545,87 @@ void main() {
     );
   });
 
+  group(
+    'MatchController — sound/haptics preference gating '
+    '(06-localization-social-and-settings.md: independently configurable)',
+    () {
+      test(
+        'selecting a piece fires a selection haptic when Haptics is on',
+        () async {
+          final repos = await createTestRepositories();
+          final config = _config();
+          final haptics = _RecordingHapticsPort();
+          final container = ProviderContainer(
+            overrides: [
+              gameClockProvider.overrideWithValue(const SystemGameClock()),
+              settingsRepositoryProvider.overrideWithValue(repos.settings),
+              deviceLanguageCodeProvider.overrideWithValue('en'),
+              hapticsPortProvider.overrideWithValue(haptics),
+              profileRepositoryProvider.overrideWithValue(repos.profile),
+              matchHistoryRepositoryProvider.overrideWithValue(
+                repos.matchHistory,
+              ),
+              savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
+            ],
+          );
+          addTearDown(container.dispose);
+          container.listen(
+            matchControllerProvider(config),
+            (_, _) {},
+            fireImmediately: true,
+          );
+
+          container
+              .read(matchControllerProvider(config).notifier)
+              .onNodeTapped('r1c2');
+
+          expect(haptics.calls, contains('selection'));
+        },
+      );
+
+      test('turning Haptics off in settings silences selection and match-end '
+          'haptics from MatchController', () async {
+        final repos = await createTestRepositories();
+        final config = _config();
+        final haptics = _RecordingHapticsPort();
+        final container = ProviderContainer(
+          overrides: [
+            gameClockProvider.overrideWithValue(const SystemGameClock()),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
+            deviceLanguageCodeProvider.overrideWithValue('en'),
+            hapticsPortProvider.overrideWithValue(haptics),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(settingsControllerProvider.notifier).setHapticsOn(false);
+        container.listen(
+          matchControllerProvider(config),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        final notifier = container.read(
+          matchControllerProvider(config).notifier,
+        );
+
+        notifier.onNodeTapped('r1c2');
+        notifier.resign(Side.top);
+
+        expect(
+          haptics.calls,
+          isEmpty,
+          reason:
+              'Haptics off must silence every MatchController haptic, '
+              'not just presentation-timeline ones',
+        );
+      });
+    },
+  );
+
   group('MatchController — persistence (Phase 6)', () {
     late ProviderContainer container;
     late MatchConfig config;

@@ -96,6 +96,7 @@ void main() {
     SettingsRepository settingsRepository, {
     ReducedMotionPreference reducedMotion = ReducedMotionPreference.off,
     VisualQuality visualQuality = VisualQuality.standard,
+    bool hapticsOn = true,
   }) {
     final haptics = _RecordingHapticsPort();
     final container = ProviderContainer(
@@ -116,6 +117,7 @@ void main() {
     container
         .read(settingsControllerProvider.notifier)
         .setVisualQuality(visualQuality);
+    container.read(settingsControllerProvider.notifier).setHapticsOn(hapticsOn);
 
     container.listen(
       movePresentationControllerProvider(_config),
@@ -349,4 +351,35 @@ void main() {
       });
     },
   );
+
+  test('turning the Haptics setting off silences move/capture haptics '
+      '(06-localization-social-and-settings.md: sound and haptics must be '
+      'independently configurable)', () async {
+    final settingsRepository = await _createSettingsRepository();
+    fakeAsync((async) {
+      final harness = buildHarness(async, settingsRepository, hapticsOn: false);
+      final notifier = harness.container.read(
+        movePresentationControllerProvider(_config).notifier,
+      );
+
+      notifier.enqueue({
+        'r1c2': Side.top,
+      }, _moveEvent(source: 'r1c2', destination: 'r2c2'));
+      async.elapse(const Duration(seconds: 2));
+
+      notifier.enqueue({
+        'r1c2': Side.top,
+        'r2c2': Side.bottom,
+      }, _captureEvent(source: 'r1c2', over: 'r2c2', destination: 'r3c2'));
+      async.elapse(const Duration(seconds: 2));
+
+      expect(
+        harness.haptics.calls,
+        isEmpty,
+        reason:
+            'with Haptics off in settings, no presentation-timeline '
+            'event should ever call into the HapticsPort',
+      );
+    });
+  });
 }

@@ -126,7 +126,7 @@
   "historyOutcomeDraw": "برابر",
   "historyOpponentMachine": "بمقابلہ مشین ({difficulty})",
   "historyOpponentPlayer": "بمقابلہ {name}",
-  "historyMoveCount": "{count} چالیں",
+  "historyMoveCount": "{count, plural, one{{count} چال} other{{count} چالیں}}",
 
   "resumeMatchAvailableTitle": "آپ کا ایک میچ جاری ہے",
   "resumeMatchButton": "جاری رکھیں",

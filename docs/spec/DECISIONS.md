@@ -370,3 +370,50 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
       real the first time this branch is pushed or a PR is opened
       against it, which is the first opportunity to confirm it
       actually passes end-to-end.
+  - **Seventh gap, found doing a targeted pass against 06 and 08 —
+    a real functional bug, not just a missing feature.** 06's "Move-
+    feedback preferences" section requires sound and haptics to be
+    "independently configurable"; `AppSettings.hapticsOn` and
+    `.soundOn` existed, persisted correctly, and drove the Settings
+    screen's own toggle switches — but nothing else in the codebase
+    ever *read* either value. Every haptic call
+    (`_haptics.move()`/`.capture()` in
+    `MovePresentationController._beginStep`, `hapticsPortProvider`
+    `.matchEnd()`/`.warning()` in `MatchController`) fired
+    unconditionally: turning "Haptics" off in Settings did nothing at
+    all — the device kept vibrating on every move, capture, warning
+    and match end. Gated all of them behind
+    `ref.read(settingsControllerProvider).hapticsOn` /`.soundOn` at
+    each call site (matching this codebase's existing preference for
+    small inline checks over a decorator/wrapper abstraction — see
+    e.g. the `visualQuality`/`reducedMotion` checks already inline in
+    the same functions). While auditing every call site, also found
+    `HapticsPort.selection()`/`SoundPort.selection()` were declared in
+    the interface (per 05's "Haptics: subtle selection/capture/end
+    patterns") but never actually called anywhere — `onNodeTapped` in
+    `MatchController` now fires a selection cue when a tap results in
+    a new (non-null) selection, gated the same way. `NoopSoundPort`
+    remains the documented sound no-op from Phase 4 either way, so the
+    `soundOn` gating has no audible effect yet, but is now correct and
+    ready for when a real `SoundPort` is added.
+  - **Eighth gap, found the same pass**: 06's opening paragraph
+    requires "plural/select support" in the ARB files; the one
+    genuinely pluralizable string in the app, `historyMoveCount`
+    ("{count} moves" in match history), was a flat placeholder that
+    would read "1 moves" for a one-move match. Switched both
+    `app_en.arb` and `app_ur.arb` to ICU `plural` syntax
+    (`one`/`other` categories) — every other placeholder-bearing
+    string in the ARB files (turn banner, announcements, quick chat,
+    etc.) interpolates a name/position/phrase, not a bare count, so
+    none of them needed the same treatment.
+  - **Ninth gap, found the same pass**: 08's unit-test-pyramid line
+    calls for "serializers/migrations" coverage. `SavedGameSnapshot`
+    is the only persisted entity that has actually undergone a schema
+    bump (v1 → v2, when `perMoveRemaining` was added in the gap-fill
+    documented earlier in this file) and had no test exercising that
+    migration path specifically — only the current (v2) shape was
+    ever round-tripped. `saved_game_test.dart` now includes an
+    explicit test that feeds `SavedGameSnapshot.fromJson` a v1-shaped
+    map (no `perMoveRemainingMs` key at all) and asserts it loads
+    cleanly with `perMoveRemaining: null`, rather than only relying on
+    `fromJson`'s nullable cast to make that case work by accident.

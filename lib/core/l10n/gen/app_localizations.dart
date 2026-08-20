@@ -809,7 +809,7 @@ abstract class AppLocalizations {
   /// No description provided for @historyMoveCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} moves'**
+  /// **'{count, plural, one{{count} move} other{{count} moves}}'**
   String historyMoveCount(int count);
 
   /// No description provided for @resumeMatchAvailableTitle.

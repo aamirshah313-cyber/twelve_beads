@@ -163,7 +163,7 @@
   "@historyOpponentMachine": {"placeholders": {"difficulty": {"type": "String"}}},
   "historyOpponentPlayer": "vs {name}",
   "@historyOpponentPlayer": {"placeholders": {"name": {"type": "String"}}},
-  "historyMoveCount": "{count} moves",
+  "historyMoveCount": "{count, plural, one{{count} move} other{{count} moves}}",
   "@historyMoveCount": {"placeholders": {"count": {"type": "int"}}},
 
   "resumeMatchAvailableTitle": "You have a match in progress",

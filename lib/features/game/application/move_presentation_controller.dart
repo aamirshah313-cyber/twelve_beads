@@ -128,12 +128,13 @@ class MovePresentationController extends Notifier<MovePresentationState> {
   }
 
   void _beginStep(PresentationStep step) {
+    final settings = ref.read(settingsControllerProvider);
     if (step.event.capturedNodes.isNotEmpty) {
-      _haptics.capture();
-      _sound.capture();
+      if (settings.hapticsOn) _haptics.capture();
+      if (settings.soundOn) _sound.capture();
     } else {
-      _haptics.move();
-      _sound.move();
+      if (settings.hapticsOn) _haptics.move();
+      if (settings.soundOn) _sound.move();
     }
     state = MovePresentationState(
       current: step,

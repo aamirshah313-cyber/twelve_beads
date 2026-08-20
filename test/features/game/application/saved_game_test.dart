@@ -107,6 +107,37 @@ void main() {
     });
   });
 
+  group('SavedGameSnapshot schema migration (v1 -> v2)', () {
+    test('a v1-shaped stored JSON blob (schemaVersion 1, no perMoveRemainingMs '
+        'key at all — from before the per-move timer existed) loads cleanly '
+        'with perMoveRemaining null, rather than throwing', () {
+      final v1Json = {
+        'schemaVersion': 1,
+        'config': const MatchConfig(
+          playerOneName: 'Alice',
+          playerTwoName: 'Bilal',
+          playerOneSide: Side.top,
+          firstTurn: Side.top,
+          timerMinutes: 5,
+        ).toJson(),
+        'actionLog': [const MoveAction(from: 'r1c2', to: 'r2c2').toJson()],
+        'topRemainingMs': const Duration(minutes: 4).inMilliseconds,
+        'bottomRemainingMs': const Duration(minutes: 5).inMilliseconds,
+        // No 'perMoveRemainingMs' key: this is the exact shape a v1
+        // snapshot was persisted with, before that field existed.
+        'startedAt': DateTime(2026, 1, 1, 9).toIso8601String(),
+        'savedAt': DateTime(2026, 1, 1, 9, 5).toIso8601String(),
+      };
+
+      final restored = SavedGameSnapshot.fromJson(v1Json);
+
+      expect(restored.perMoveRemaining, isNull);
+      expect(restored.config.perMoveTimerEnabled, isFalse);
+      expect(restored.topRemaining, const Duration(minutes: 4));
+      expect(restored.actionLog, hasLength(1));
+    });
+  });
+
   group('SavedGameRepository — real storage round trip', () {
     test(
       'save then load through actual SharedPreferences-backed storage '

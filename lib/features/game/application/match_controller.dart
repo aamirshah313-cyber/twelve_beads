@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/history/match_history_controller.dart';
 import '../../../core/history/match_record.dart';
 import '../../../core/profile/profile_controller.dart';
+import '../../../core/settings/settings_controller.dart';
 import '../../../game/board/board_graph.dart';
 import '../../../game/engine/game_action.dart';
 import '../../../game/engine/game_state.dart';
@@ -212,7 +213,13 @@ class MatchController extends Notifier<MatchUiState> {
 
     final hasLegalFrom = legal.any((a) => _sourceOf(a) == node);
     if (hasLegalFrom) {
-      state = _withSelection(node == state.selectedNode ? null : node);
+      final newSelection = node == state.selectedNode ? null : node;
+      if (newSelection != null) {
+        final settings = ref.read(settingsControllerProvider);
+        if (settings.hapticsOn) ref.read(hapticsPortProvider).selection();
+        if (settings.soundOn) ref.read(soundPortProvider).selection();
+      }
+      state = _withSelection(newSelection);
     } else if (state.selectedNode != null) {
       state = _withSelection(null);
     }
@@ -364,7 +371,9 @@ class MatchController extends Notifier<MatchUiState> {
           .enqueue(piecesBefore, outcome.event);
     }
     if (outcome.state.phase == GamePhase.finished) {
-      ref.read(hapticsPortProvider).matchEnd();
+      if (ref.read(settingsControllerProvider).hapticsOn) {
+        ref.read(hapticsPortProvider).matchEnd();
+      }
       _finalizeMatch(outcome.state);
     } else {
       _autosave();
@@ -582,8 +591,9 @@ class MatchController extends Notifier<MatchUiState> {
           live.perMove! <= timerWarningThreshold;
       if (totalWarning || perMoveWarning) {
         _warnedForCurrentArm = true;
-        ref.read(hapticsPortProvider).warning();
-        ref.read(soundPortProvider).warning();
+        final settings = ref.read(settingsControllerProvider);
+        if (settings.hapticsOn) ref.read(hapticsPortProvider).warning();
+        if (settings.soundOn) ref.read(soundPortProvider).warning();
       }
     }
 

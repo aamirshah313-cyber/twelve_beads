@@ -406,7 +406,13 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String historyMoveCount(int count) {
-    return '$count چالیں';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count چالیں',
+      one: '$count چال',
+    );
+    return '$_temp0';
   }
 
   @override
