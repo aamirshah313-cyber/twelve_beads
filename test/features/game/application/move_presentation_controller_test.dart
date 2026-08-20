@@ -31,6 +31,8 @@ class _RecordingHapticsPort implements HapticsPort {
   void capture() => calls.add('capture');
   @override
   void matchEnd() => calls.add('matchEnd');
+  @override
+  void warning() => calls.add('warning');
 }
 
 const _config = MatchConfig(

@@ -26,6 +26,10 @@ class MatchUiState {
   final NodeId? lastMoveDestination;
   final Duration topRemaining;
   final Duration bottomRemaining;
+
+  /// Remaining time on the current per-move timer, if
+  /// [MatchConfig.perMoveTimerEnabled]; null otherwise.
+  final Duration? perMoveRemaining;
   final bool isPaused;
 
   const MatchUiState({
@@ -37,6 +41,7 @@ class MatchUiState {
     required this.lastMoveDestination,
     required this.topRemaining,
     required this.bottomRemaining,
+    required this.perMoveRemaining,
     required this.isPaused,
   });
 
@@ -54,6 +59,9 @@ class MatchUiState {
       lastMoveDestination: null,
       topRemaining: total,
       bottomRemaining: total,
+      perMoveRemaining: config.perMoveTimerEnabled
+          ? Duration(seconds: config.perMoveSeconds)
+          : null,
       isPaused: false,
     );
   }
@@ -90,6 +98,11 @@ NodeId? _destinationOf(GameAction action) => switch (action) {
   ResignAction() || TimeoutAction() => null,
 };
 
+/// Shared with the presentation layer (player rail countdown coloring) so
+/// the visual "running low" cue always matches exactly when
+/// [MatchController] actually fires the warning haptic/sound.
+const timerWarningThreshold = Duration(seconds: 10);
+
 class MatchController extends Notifier<MatchUiState> {
   MatchController(this.config);
 
@@ -98,12 +111,20 @@ class MatchController extends Notifier<MatchUiState> {
   Timer? _timer;
   DateTime? _armedAt;
   Side? _armedSide;
+  bool _warnedForCurrentArm = false;
   late final String _matchId;
   int _actionSequence = 0;
   late DateTime _startedAt;
   bool _finalized = false;
 
   GameClock get _clock => ref.read(gameClockProvider);
+
+  bool get _anyClockEnabled =>
+      config.timerEnabled || config.perMoveTimerEnabled;
+
+  Duration? _freshPerMoveRemaining() => config.perMoveTimerEnabled
+      ? Duration(seconds: config.perMoveSeconds)
+      : null;
 
   @override
   MatchUiState build() {
@@ -145,6 +166,7 @@ class MatchController extends Notifier<MatchUiState> {
             : _destinationOf(pending.actionLog.last),
         topRemaining: pending.topRemaining,
         bottomRemaining: pending.bottomRemaining,
+        perMoveRemaining: pending.perMoveRemaining,
         // Land paused: the player must explicitly resume for the clock (and
         // the machine, if any) to start, rather than either silently
         // running in the background.
@@ -155,7 +177,7 @@ class MatchController extends Notifier<MatchUiState> {
       initial = MatchUiState.initial(config);
     }
 
-    if (initial.config.timerEnabled && !initial.isPaused) {
+    if (_anyClockEnabled && !initial.isPaused) {
       _armClock(initial.gameState.turn);
       // Can't call _startTimer() here: it reads `state`, which isn't set
       // until this build() call returns. Start the periodic timer directly.
@@ -239,6 +261,11 @@ class MatchController extends Notifier<MatchUiState> {
       lastMoveDestination: newLog.isEmpty ? null : _destinationOf(newLog.last),
       topRemaining: state.topRemaining,
       bottomRemaining: state.bottomRemaining,
+      // Undo effectively gives the side whose move was undone a fresh
+      // attempt — reset the per-move budget rather than carrying forward
+      // an arbitrary already-elapsed amount with no historical record of
+      // exactly when it was spent.
+      perMoveRemaining: _freshPerMoveRemaining(),
       isPaused: state.isPaused,
     );
 
@@ -282,7 +309,7 @@ class MatchController extends Notifier<MatchUiState> {
     ref.read(savedGameControllerProvider.notifier).clear();
     final fresh = MatchUiState.initial(state.config);
     state = fresh;
-    if (fresh.config.timerEnabled) {
+    if (_anyClockEnabled) {
       _armClock(fresh.gameState.turn);
       _startTimer();
     }
@@ -303,6 +330,9 @@ class MatchController extends Notifier<MatchUiState> {
 
     final source = _sourceOf(action) ?? state.lastMoveSource;
     final destination = _destinationOf(action) ?? state.lastMoveDestination;
+    // A forced capture chain keeps the same mover and doesn't consume a new
+    // per-move budget; only an actual turn change does.
+    final turnChanged = outcome.state.turn != state.gameState.turn;
 
     state = MatchUiState(
       config: state.config,
@@ -313,6 +343,9 @@ class MatchController extends Notifier<MatchUiState> {
       lastMoveDestination: destination,
       topRemaining: state.topRemaining,
       bottomRemaining: state.bottomRemaining,
+      perMoveRemaining: turnChanged
+          ? _freshPerMoveRemaining()
+          : state.perMoveRemaining,
       isPaused: state.isPaused,
     );
 
@@ -359,6 +392,7 @@ class MatchController extends Notifier<MatchUiState> {
             actionLog: state.actionLog,
             topRemaining: state.topRemaining,
             bottomRemaining: state.bottomRemaining,
+            perMoveRemaining: state.perMoveRemaining,
             startedAt: _startedAt,
             savedAt: _clock.now(),
           ),
@@ -427,6 +461,7 @@ class MatchController extends Notifier<MatchUiState> {
     lastMoveDestination: state.lastMoveDestination,
     topRemaining: state.topRemaining,
     bottomRemaining: state.bottomRemaining,
+    perMoveRemaining: state.perMoveRemaining,
     isPaused: state.isPaused,
   );
 
@@ -439,18 +474,20 @@ class MatchController extends Notifier<MatchUiState> {
     lastMoveDestination: state.lastMoveDestination,
     topRemaining: state.topRemaining,
     bottomRemaining: state.bottomRemaining,
+    perMoveRemaining: state.perMoveRemaining,
     isPaused: paused,
   );
 
   void _armClock(Side side) {
     _armedAt = _clock.now();
     _armedSide = side;
+    _warnedForCurrentArm = false;
   }
 
   void _startTimer() {
     _timer?.cancel();
     _timer = null;
-    if (!state.config.timerEnabled) return;
+    if (!_anyClockEnabled) return;
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
   }
 
@@ -465,9 +502,10 @@ class MatchController extends Notifier<MatchUiState> {
     return _clock.now().difference(armedAt);
   }
 
-  ({Duration top, Duration bottom}) _liveRemaining() {
+  ({Duration top, Duration bottom, Duration? perMove}) _liveRemaining() {
     var top = state.topRemaining;
     var bottom = state.bottomRemaining;
+    var perMove = state.perMoveRemaining;
     final elapsed = _elapsedSinceArm();
     if (_armedSide == Side.top) {
       top -= elapsed;
@@ -476,11 +514,15 @@ class MatchController extends Notifier<MatchUiState> {
       bottom -= elapsed;
       if (bottom < Duration.zero) bottom = Duration.zero;
     }
-    return (top: top, bottom: bottom);
+    if (perMove != null && _armedSide != null) {
+      perMove -= elapsed;
+      if (perMove < Duration.zero) perMove = Duration.zero;
+    }
+    return (top: top, bottom: bottom, perMove: perMove);
   }
 
   void _freezeClocksIntoState() {
-    if (!state.config.timerEnabled) return;
+    if (!_anyClockEnabled) return;
     final live = _liveRemaining();
     state = MatchUiState(
       config: state.config,
@@ -491,6 +533,7 @@ class MatchController extends Notifier<MatchUiState> {
       lastMoveDestination: state.lastMoveDestination,
       topRemaining: live.top,
       bottomRemaining: live.bottom,
+      perMoveRemaining: live.perMove,
       isPaused: state.isPaused,
     );
     _armedAt = null;
@@ -498,7 +541,7 @@ class MatchController extends Notifier<MatchUiState> {
   }
 
   void _onTick() {
-    if (!state.config.timerEnabled || state.isPaused) return;
+    if (!_anyClockEnabled || state.isPaused) return;
     final live = _liveRemaining();
     state = MatchUiState(
       config: state.config,
@@ -509,18 +552,42 @@ class MatchController extends Notifier<MatchUiState> {
       lastMoveDestination: state.lastMoveDestination,
       topRemaining: live.top,
       bottomRemaining: live.bottom,
+      perMoveRemaining: live.perMove,
       isPaused: state.isPaused,
     );
-    // Re-arm from now: state.topRemaining/bottomRemaining already reflect
-    // elapsed time up to this instant, so the next tick must measure
-    // elapsed since *now*, not keep accumulating from the original arm —
-    // otherwise each tick double-subtracts already-applied elapsed time.
+    // Re-arm from now: state.topRemaining/bottomRemaining/perMoveRemaining
+    // already reflect elapsed time up to this instant, so the next tick
+    // must measure elapsed since *now*, not keep accumulating from the
+    // original arm — otherwise each tick double-subtracts already-applied
+    // elapsed time. Re-arming also resets the per-arm warning flag, so
+    // re-derive it below from the just-frozen values instead.
     _armedAt = _clock.now();
 
-    final activeRemaining = state.gameState.turn == Side.top
+    final activeTotalRemaining = state.gameState.turn == Side.top
         ? live.top
         : live.bottom;
-    if (activeRemaining <= Duration.zero) {
+    final totalTimedOut =
+        state.config.timerEnabled && activeTotalRemaining <= Duration.zero;
+    final perMoveTimedOut =
+        live.perMove != null && live.perMove! <= Duration.zero;
+
+    if (!_warnedForCurrentArm && !totalTimedOut && !perMoveTimedOut) {
+      final totalWarning =
+          state.config.timerEnabled &&
+          activeTotalRemaining > Duration.zero &&
+          activeTotalRemaining <= timerWarningThreshold;
+      final perMoveWarning =
+          live.perMove != null &&
+          live.perMove! > Duration.zero &&
+          live.perMove! <= timerWarningThreshold;
+      if (totalWarning || perMoveWarning) {
+        _warnedForCurrentArm = true;
+        ref.read(hapticsPortProvider).warning();
+        ref.read(soundPortProvider).warning();
+      }
+    }
+
+    if (totalTimedOut || perMoveTimedOut) {
       _cancelTimer();
       _armedAt = null;
       _applyAndUpdate(TimeoutAction(state.gameState.turn));

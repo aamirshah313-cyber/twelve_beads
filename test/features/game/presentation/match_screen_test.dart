@@ -293,4 +293,56 @@ void main() {
     final after = currentTopBeadColor();
     expect(after, isNot(before));
   });
+
+  testWidgets('quick chat: sending a phrase shows an attributed bubble that '
+      'auto-dismisses, and re-sending immediately is rate-limited', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await _app());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Quick chat'));
+    await tester.pumpAndSettle();
+    expect(find.text('Send a quick chat'), findsOneWidget);
+
+    await tester.tap(find.text('Good move'));
+    await tester.pumpAndSettle();
+
+    // It's Alice's (top's) turn at the start of a two-player match.
+    expect(find.text('Alice: Good move'), findsOneWidget);
+
+    // Rate-limited: the button is disabled again immediately after.
+    await tester.tap(find.byTooltip('Quick chat'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Send a quick chat'),
+      findsNothing,
+      reason: 'the quick-chat button should be disabled during cooldown',
+    );
+
+    // Flush the display duration — the bubble disappears on its own.
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.text('Alice: Good move'), findsNothing);
+  });
+
+  testWidgets(
+    'quick chat in vs-Machine mode always represents the human, even on '
+    "the machine's own turn",
+    (tester) async {
+      await tester.pumpWidget(await _app(config: _vsMachineConfig()));
+      await tester.pumpAndSettle();
+
+      await _tapNode(tester, 'r1c2');
+      await _tapNode(tester, 'r2c2');
+      // It's now bottom's (the machine's) turn, mid-thinking or already
+      // replied — either way quick chat must still speak as Alice, the
+      // human (playerOneSide), never as "Machine".
+      await tester.tap(find.byTooltip('Quick chat'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Well played'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alice: Well played'), findsOneWidget);
+    },
+  );
 }

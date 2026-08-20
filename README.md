@@ -12,7 +12,9 @@ stats, badges, match history, an in-progress match) stays on the device.
   procedurally rendered — never a static image asset — with mandatory
   capture and mandatory chain-capture continuation.
 - Local two-player pass-and-play, with optional per-player chess-clock
-  timers.
+  timers (fixed presets or a custom value) and an independent optional
+  per-move timer, each with a low-time warning cue (visual + haptic +
+  the stubbed sound cue).
 - Offline machine opponent: Easy (random legal move), Medium (fixed-depth
   search), Difficult (iterative-deepening search with alpha-beta pruning and
   a bounded time budget) — all three only ever consult the same
@@ -27,6 +29,9 @@ stats, badges, match history, an in-progress match) stays on the device.
   a tri-state reduced-motion preference, a high-contrast mode that reaches
   the board's own bead colors, and non-color-only visual cues throughout
   (shape, not just color, for legal moves/captures/selection/etc.).
+- Local quick chat: a small set of preset phrases ("Good move", "Your
+  turn", ...) shown as a transient, auto-dismissing overlay during a
+  match — no free text, no transmission, purely local and decorative.
 - Local profile stats, six badges, and a capped match-history list.
 - Resume: an in-progress match survives an app restart and can be resumed
   (landing paused) or discarded from the home screen.

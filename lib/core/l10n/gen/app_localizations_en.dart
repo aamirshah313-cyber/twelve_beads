@@ -84,6 +84,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timerOff => 'Off';
 
   @override
+  String get timerCustom => 'Custom';
+
+  @override
+  String get timerCustomMinutesLabel => 'Custom minutes';
+
+  @override
+  String get perMoveTimerLabel => 'Per-move timer';
+
+  @override
+  String get timerCustomSecondsLabel => 'Custom seconds';
+
+  @override
   String get startMatchButton => 'Start Match';
 
   @override
@@ -228,6 +240,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get opponentMoveInProgress => 'Move in progress';
+
+  @override
+  String get quickChatButtonTooltip => 'Quick chat';
+
+  @override
+  String get quickChatSheetTitle => 'Send a quick chat';
+
+  @override
+  String get quickChatGoodMove => 'Good move';
+
+  @override
+  String get quickChatYourTurn => 'Your turn';
+
+  @override
+  String get quickChatWellPlayed => 'Well played';
+
+  @override
+  String get quickChatNiceTry => 'Nice try';
+
+  @override
+  String get quickChatOneMoment => 'One moment';
+
+  @override
+  String get quickChatGoodGame => 'Good game';
+
+  @override
+  String quickChatBubble(String name, String phrase) {
+    return '$name: $phrase';
+  }
 
   @override
   String get rulesScreenTitle => 'How to Play';

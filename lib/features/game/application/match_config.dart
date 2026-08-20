@@ -18,6 +18,12 @@ class MatchConfig {
   /// Total time per player, in minutes. 0 means the timer is off.
   final int timerMinutes;
 
+  /// Optional per-move time limit, in seconds. 0 means it's off. Can be
+  /// enabled independently of (and alongside) [timerMinutes] — per
+  /// 01-product-requirements.md's "optional per-move 15/30/45/60/custom
+  /// sec" timer mode.
+  final int perMoveSeconds;
+
   /// Which side the machine plays, or null for a local two-player match.
   final Side? machineSide;
   final Difficulty difficulty;
@@ -29,6 +35,7 @@ class MatchConfig {
     required this.firstTurn,
     this.ruleset = Ruleset.classicAlquerque,
     required this.timerMinutes,
+    this.perMoveSeconds = 0,
     this.machineSide,
     this.difficulty = Difficulty.medium,
   });
@@ -44,6 +51,7 @@ class MatchConfig {
       side == playerOneSide ? playerOneName : playerTwoName;
 
   bool get timerEnabled => timerMinutes > 0;
+  bool get perMoveTimerEnabled => perMoveSeconds > 0;
 
   Map<String, Object?> toJson() => {
     'playerOneName': playerOneName,
@@ -52,6 +60,7 @@ class MatchConfig {
     'firstTurn': firstTurn.name,
     'rulesetId': ruleset.id,
     'timerMinutes': timerMinutes,
+    'perMoveSeconds': perMoveSeconds,
     'machineSide': machineSide?.name,
     'difficulty': difficulty.name,
   };
@@ -68,6 +77,7 @@ class MatchConfig {
           Ruleset.knownRulesets[json['rulesetId'] as String] ??
           Ruleset.classicAlquerque,
       timerMinutes: json['timerMinutes'] as int,
+      perMoveSeconds: json['perMoveSeconds'] as int? ?? 0,
       machineSide: machineSideName != null
           ? Side.values.byName(machineSideName)
           : null,

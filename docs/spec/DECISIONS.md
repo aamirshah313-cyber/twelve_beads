@@ -252,3 +252,54 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
     with no competitive stakes in its history, per
     07-android-quality-security-and-release.md's own framing ("do not
     trust client-side history as competitive proof").
+  - **Gap found during the final cross-check against every numbered spec
+    file, not during any earlier phase**: local quick chat (00-master-
+    claude-code-prompt.md, 01-product-requirements.md,
+    05-ai-and-gameplay-systems.md "Quick chat and feedback",
+    06-localization-social-and-settings.md, and the Phase 4/"Progression"
+    row of 08-testing-and-delivery-plan.md all require it) had never
+    actually been implemented in any prior phase. Added it here rather
+    than treating the project as done with a documented requirement
+    silently missing: a fixed preset of six localized phrases (no free
+    text, nothing ever transmitted), shown as a transient overlay that
+    auto-dismisses after 3 seconds. Rate limiting is achieved by
+    construction rather than a separate cooldown clock: a new phrase
+    can't be sent while one is still showing, which already spaces sends
+    at least `displayDuration` apart and keeps the send-button's enabled
+    state trivially reactive (no polling needed to know when the "cooldown"
+    has elapsed). "Tied to the active side" is interpreted as: in local
+    two-player pass-and-play, whichever side's turn it currently is; in
+    vs-Machine mode, always the human (`playerOneSide`) regardless of
+    whose turn it is, since a human tapping the button should never
+    appear to "speak as" the machine opponent.
+  - **Second gap found the same way**: 01-product-requirements.md's
+    "Timers:" line specifies an *optional per-move* timer (15/30/45/60/
+    custom sec) and a *warning threshold*, on top of the total-time
+    timer already built in Phase 3 — neither existed. Added both,
+    extending (not replacing) `MatchController`'s existing arm/tick/
+    freeze timer machinery rather than introducing a parallel one:
+    - The per-move budget resets only on a genuine turn change, not
+      mid capture-chain (a forced chain is still "one move" for this
+      purpose) — determined by comparing `GameState.turn` before/after
+      applying an action, not by counting individual jumps.
+    - `undo()` resets the per-move budget to full for the side whose
+      move was undone, rather than trying to reconstruct exactly how
+      much they'd already spent — there's no historical per-action
+      timing record to reconstruct it from, and "fresh attempt" is the
+      more defensible interpretation anyway.
+    - The warning threshold (last 10 seconds of whichever clock —
+      total or per-move — is closer to expiry) fires the haptic/sound
+      "warning" cue (added to `HapticsPort`/`SoundPort`) exactly once
+      per arm via a `_warnedForCurrentArm` flag reset alongside
+      `_armClock`, not on every tick while under threshold. The exact
+      same `Duration` constant (`timerWarningThreshold`, exported from
+      `match_controller.dart`) drives the player rail's countdown text
+      turning red, so the visual and audible/haptic cues can never
+      drift out of sync with each other.
+    - Setup-screen "custom" values use a sentinel dropdown entry
+      (`_customTimerSentinel = -1`, never a real timer value since both
+      minutes and seconds are always >= 0) that reveals a numeric
+      `TextField`, rather than a separate widget/dialog — kept the
+      pre-game form's existing `DropdownMenu`-per-setting layout
+      consistent rather than introducing a new interaction pattern for
+      just these two fields.

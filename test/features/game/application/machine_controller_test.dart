@@ -37,6 +37,8 @@ class _NoopHapticsPort implements HapticsPort {
   void capture() {}
   @override
   void matchEnd() {}
+  @override
+  void warning() {}
 }
 
 MatchConfig _vsMachineConfig({

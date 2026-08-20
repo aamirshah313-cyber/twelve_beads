@@ -13,9 +13,12 @@ import '../application/match_config.dart';
 import '../application/match_controller.dart';
 import '../application/move_presentation_controller.dart';
 import '../application/move_presentation_state.dart';
+import '../application/quick_chat_controller.dart';
+import '../application/quick_chat_phrases.dart';
 import 'board_painter.dart';
 import 'board_widget.dart';
 import 'node_description.dart';
+import 'quick_chat_presentation.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
   const MatchScreen({super.key, required this.config});
@@ -64,6 +67,20 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     final presentation = ref.watch(presentationProvider);
     final machineProvider = machineControllerProvider(widget.config);
     final isMachineThinking = ref.watch(machineProvider).isThinking;
+    final quickChatProvider = quickChatControllerProvider(widget.config);
+    final quickChat = ref.watch(quickChatProvider);
+
+    ref.listen(quickChatProvider, (previous, next) {
+      if (next.isVisible && next.phraseId != previous?.phraseId) {
+        final name = widget.config.nameForSide(next.side!);
+        final phrase = describeQuickChatPhrase(l10n, next.phraseId!);
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          l10n.quickChatBubble(name, phrase),
+          Directionality.of(context),
+        );
+      }
+    });
 
     ref.listen(machineProvider, (previous, next) {
       if (!(previous?.isThinking ?? false) && next.isThinking) {
@@ -124,6 +141,16 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                 : () => _confirmResign(context, controller, matchState, l10n),
           ),
           IconButton(
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            tooltip: l10n.quickChatButtonTooltip,
+            onPressed:
+                matchState.gameState.phase != GamePhase.playing ||
+                    matchState.isPaused ||
+                    quickChat.isVisible
+                ? null
+                : () => _showQuickChatSheet(context, ref, matchState, l10n),
+          ),
+          IconButton(
             icon: const Icon(Icons.menu_book_rounded),
             tooltip: l10n.navHowToPlay,
             onPressed: () => Navigator.of(context).pushNamed(AppRoutes.rules),
@@ -152,9 +179,70 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       );
               },
             ),
+            if (quickChat.isVisible)
+              _QuickChatBubble(
+                l10n: l10n,
+                name: widget.config.nameForSide(quickChat.side!),
+                phraseId: quickChat.phraseId!,
+              ),
             if (matchState.isPaused)
               _PausedOverlay(l10n: l10n, onResume: controller.resume),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Quick chat represents the human in vs-Machine mode regardless of whose
+  /// turn it is (a human shouldn't appear to "speak as" the machine); in
+  /// local two-player pass-and-play it's tied to whichever side's turn it
+  /// currently is, per "local overlay tied to the active side" in
+  /// 05-ai-and-gameplay-systems.md.
+  void _showQuickChatSheet(
+    BuildContext context,
+    WidgetRef ref,
+    MatchUiState matchState,
+    AppLocalizations l10n,
+  ) {
+    final side = widget.config.isVsMachine
+        ? widget.config.playerOneSide
+        : matchState.gameState.turn;
+
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.quickChatSheetTitle,
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  for (final phraseId in QuickChatPhraseIds.all)
+                    ActionChip(
+                      label: Text(describeQuickChatPhrase(l10n, phraseId)),
+                      onPressed: () {
+                        ref
+                            .read(
+                              quickChatControllerProvider(widget.config)
+                                  .notifier,
+                            )
+                            .send(phraseId, side);
+                        Navigator.of(sheetContext).pop();
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -541,6 +629,14 @@ class _PlayerRail extends ConsumerWidget {
     final remaining = side == Side.top
         ? state.topRemaining
         : state.bottomRemaining;
+    // Warning coloring only applies to the side actually on the clock —
+    // the inactive side's countdown is frozen and never "running low" in
+    // any way that needs a cue.
+    final isTimeRunningLow =
+        isActive &&
+        ((state.config.timerEnabled && remaining <= timerWarningThreshold) ||
+            (state.perMoveRemaining != null &&
+                state.perMoveRemaining! <= timerWarningThreshold));
     final highContrast = ref.watch(settingsControllerProvider).highContrast;
     final beadColor = effectiveBeadColor(
       side,
@@ -562,7 +658,27 @@ class _PlayerRail extends ConsumerWidget {
       ),
       if (state.config.timerEnabled) ...[
         const SizedBox(width: AppSpacing.md, height: AppSpacing.xs),
-        Text(_formatDuration(remaining), style: textTheme.bodyMedium),
+        Text(
+          _formatDuration(remaining),
+          style: textTheme.bodyMedium?.copyWith(
+            color: isTimeRunningLow
+                ? Theme.of(context).colorScheme.error
+                : null,
+            fontWeight: isTimeRunningLow ? FontWeight.bold : null,
+          ),
+        ),
+      ],
+      if (state.perMoveRemaining != null) ...[
+        const SizedBox(width: AppSpacing.sm, height: AppSpacing.xs),
+        Text(
+          '(${_formatDuration(state.perMoveRemaining!)})',
+          style: textTheme.bodySmall?.copyWith(
+            color: isTimeRunningLow
+                ? Theme.of(context).colorScheme.error
+                : null,
+            fontWeight: isTimeRunningLow ? FontWeight.bold : null,
+          ),
+        ),
       ],
     ];
 
@@ -579,6 +695,53 @@ String _formatDuration(Duration d) {
   final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
   final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
   return '$minutes:$seconds';
+}
+
+/// Transient, auto-dismissing local overlay for a sent quick-chat phrase
+/// (per 05-ai-and-gameplay-systems.md) — purely decorative, so it's laid
+/// out to never overlap the turn banner/forced-capture text that actually
+/// carries game-state information.
+class _QuickChatBubble extends StatelessWidget {
+  const _QuickChatBubble({
+    required this.l10n,
+    required this.name,
+    required this.phraseId,
+  });
+
+  final AppLocalizations l10n;
+  final String name;
+  final String phraseId;
+
+  @override
+  Widget build(BuildContext context) {
+    final phrase = describeQuickChatPhrase(l10n, phraseId);
+    return Positioned(
+      bottom: AppSpacing.lg,
+      left: AppSpacing.lg,
+      right: AppSpacing.lg,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Semantics(
+          liveRegion: true,
+          child: Card(
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Text(
+                l10n.quickChatBubble(name, phrase),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _PausedOverlay extends StatelessWidget {

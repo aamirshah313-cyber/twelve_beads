@@ -7,6 +7,7 @@ abstract class HapticsPort {
   void move();
   void capture();
   void matchEnd();
+  void warning();
 }
 
 class SystemHapticsPort implements HapticsPort {
@@ -23,6 +24,9 @@ class SystemHapticsPort implements HapticsPort {
 
   @override
   void matchEnd() => HapticFeedback.heavyImpact();
+
+  @override
+  void warning() => HapticFeedback.vibrate();
 }
 
 /// No sound assets are bundled yet (that's an asset-sourcing task, not
@@ -34,6 +38,7 @@ abstract class SoundPort {
   void move();
   void capture();
   void matchEnd();
+  void warning();
 }
 
 class NoopSoundPort implements SoundPort {
@@ -50,4 +55,7 @@ class NoopSoundPort implements SoundPort {
 
   @override
   void matchEnd() {}
+
+  @override
+  void warning() {}
 }

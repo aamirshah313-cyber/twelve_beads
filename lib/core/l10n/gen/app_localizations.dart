@@ -242,6 +242,30 @@ abstract class AppLocalizations {
   /// **'Off'**
   String get timerOff;
 
+  /// No description provided for @timerCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get timerCustom;
+
+  /// No description provided for @timerCustomMinutesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom minutes'**
+  String get timerCustomMinutesLabel;
+
+  /// No description provided for @perMoveTimerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-move timer'**
+  String get perMoveTimerLabel;
+
+  /// No description provided for @timerCustomSecondsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom seconds'**
+  String get timerCustomSecondsLabel;
+
   /// No description provided for @startMatchButton.
   ///
   /// In en, this message translates to:
@@ -481,6 +505,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Move in progress'**
   String get opponentMoveInProgress;
+
+  /// No description provided for @quickChatButtonTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick chat'**
+  String get quickChatButtonTooltip;
+
+  /// No description provided for @quickChatSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a quick chat'**
+  String get quickChatSheetTitle;
+
+  /// No description provided for @quickChatGoodMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Good move'**
+  String get quickChatGoodMove;
+
+  /// No description provided for @quickChatYourTurn.
+  ///
+  /// In en, this message translates to:
+  /// **'Your turn'**
+  String get quickChatYourTurn;
+
+  /// No description provided for @quickChatWellPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Well played'**
+  String get quickChatWellPlayed;
+
+  /// No description provided for @quickChatNiceTry.
+  ///
+  /// In en, this message translates to:
+  /// **'Nice try'**
+  String get quickChatNiceTry;
+
+  /// No description provided for @quickChatOneMoment.
+  ///
+  /// In en, this message translates to:
+  /// **'One moment'**
+  String get quickChatOneMoment;
+
+  /// No description provided for @quickChatGoodGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Good game'**
+  String get quickChatGoodGame;
+
+  /// No description provided for @quickChatBubble.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {phrase}'**
+  String quickChatBubble(String name, String phrase);
 
   /// No description provided for @rulesScreenTitle.
   ///

@@ -32,6 +32,10 @@
   "difficultyDifficult": "Difficult",
   "timerLabel": "Timer",
   "timerOff": "Off",
+  "timerCustom": "Custom",
+  "timerCustomMinutesLabel": "Custom minutes",
+  "perMoveTimerLabel": "Per-move timer",
+  "timerCustomSecondsLabel": "Custom seconds",
   "startMatchButton": "Start Match",
   "engineNotReadyMessage": "The match engine isn't built yet — that's a later phase. Your setup has been saved.",
   "machineOpponentName": "Machine",
@@ -99,6 +103,19 @@
   "chainStepAnnouncement": "Capture chain, step {step}",
   "@chainStepAnnouncement": {"placeholders": {"step": {"type": "int"}}},
   "opponentMoveInProgress": "Move in progress",
+
+  "quickChatButtonTooltip": "Quick chat",
+  "quickChatSheetTitle": "Send a quick chat",
+  "quickChatGoodMove": "Good move",
+  "quickChatYourTurn": "Your turn",
+  "quickChatWellPlayed": "Well played",
+  "quickChatNiceTry": "Nice try",
+  "quickChatOneMoment": "One moment",
+  "quickChatGoodGame": "Good game",
+  "quickChatBubble": "{name}: {phrase}",
+  "@quickChatBubble": {
+    "placeholders": {"name": {"type": "String"}, "phrase": {"type": "String"}}
+  },
 
   "rulesScreenTitle": "How to Play",
   "rulesBoardHeading": "The Board",

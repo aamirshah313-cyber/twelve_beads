@@ -84,6 +84,18 @@ class AppLocalizationsUr extends AppLocalizations {
   String get timerOff => 'بند';
 
   @override
+  String get timerCustom => 'مخصوص';
+
+  @override
+  String get timerCustomMinutesLabel => 'مخصوص منٹ';
+
+  @override
+  String get perMoveTimerLabel => 'فی چال ٹائمر';
+
+  @override
+  String get timerCustomSecondsLabel => 'مخصوص سیکنڈ';
+
+  @override
   String get startMatchButton => 'میچ شروع کریں';
 
   @override
@@ -229,6 +241,35 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get opponentMoveInProgress => 'چال جاری ہے';
+
+  @override
+  String get quickChatButtonTooltip => 'فوری بات';
+
+  @override
+  String get quickChatSheetTitle => 'فوری پیغام بھیجیں';
+
+  @override
+  String get quickChatGoodMove => 'اچھی چال';
+
+  @override
+  String get quickChatYourTurn => 'آپ کی باری';
+
+  @override
+  String get quickChatWellPlayed => 'خوب کھیلا';
+
+  @override
+  String get quickChatNiceTry => 'اچھی کوشش';
+
+  @override
+  String get quickChatOneMoment => 'ایک لمحہ';
+
+  @override
+  String get quickChatGoodGame => 'اچھا میچ';
+
+  @override
+  String quickChatBubble(String name, String phrase) {
+    return '$name: $phrase';
+  }
 
   @override
   String get rulesScreenTitle => 'کھیلنے کا طریقہ';

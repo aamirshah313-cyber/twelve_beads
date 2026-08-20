@@ -40,15 +40,33 @@ class _NoopHapticsPort implements HapticsPort {
   void capture() {}
   @override
   void matchEnd() {}
+  @override
+  void warning() {}
 }
 
-MatchConfig _config({int timerMinutes = 0}) => MatchConfig(
-  playerOneName: 'Alice',
-  playerTwoName: 'Bilal',
-  playerOneSide: Side.top,
-  firstTurn: Side.top,
-  timerMinutes: timerMinutes,
-);
+class _RecordingHapticsPort implements HapticsPort {
+  final calls = <String>[];
+  @override
+  void selection() => calls.add('selection');
+  @override
+  void move() => calls.add('move');
+  @override
+  void capture() => calls.add('capture');
+  @override
+  void matchEnd() => calls.add('matchEnd');
+  @override
+  void warning() => calls.add('warning');
+}
+
+MatchConfig _config({int timerMinutes = 0, int perMoveSeconds = 0}) =>
+    MatchConfig(
+      playerOneName: 'Alice',
+      playerTwoName: 'Bilal',
+      playerOneSide: Side.top,
+      firstTurn: Side.top,
+      timerMinutes: timerMinutes,
+      perMoveSeconds: perMoveSeconds,
+    );
 
 void main() {
   // resolveReducedMotion()'s ReducedMotionPreference.system branch reads
@@ -83,6 +101,7 @@ void main() {
           lastMoveDestination: null,
           topRemaining: Duration.zero,
           bottomRemaining: Duration.zero,
+          perMoveRemaining: null,
           isPaused: false,
         );
         expect(state.forcedCaptureActive, isTrue);
@@ -113,6 +132,7 @@ void main() {
         lastMoveDestination: null,
         topRemaining: Duration.zero,
         bottomRemaining: Duration.zero,
+        perMoveRemaining: null,
         isPaused: false,
       );
       expect(state.canUndo, isFalse);
@@ -398,6 +418,131 @@ void main() {
         );
       });
     });
+  });
+
+  group('MatchController — per-move timer and warning threshold', () {
+    test(
+      'a per-move timeout ends the match even with the total timer off',
+      () async {
+        final repos = await createTestRepositories();
+        fakeAsync((async) {
+          final config = _config(perMoveSeconds: 30);
+          final container = ProviderContainer(
+            overrides: [
+              gameClockProvider.overrideWithValue(
+                _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
+              ),
+              settingsRepositoryProvider.overrideWithValue(repos.settings),
+              deviceLanguageCodeProvider.overrideWithValue('en'),
+              hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+              profileRepositoryProvider.overrideWithValue(repos.profile),
+              matchHistoryRepositoryProvider.overrideWithValue(
+                repos.matchHistory,
+              ),
+              savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
+            ],
+          );
+          addTearDown(container.dispose);
+          container.listen(
+            matchControllerProvider(config),
+            (_, _) {},
+            fireImmediately: true,
+          );
+
+          async.elapse(const Duration(seconds: 31));
+
+          final state = container.read(matchControllerProvider(config));
+          expect(state.gameState.phase, GamePhase.finished);
+          expect(state.gameState.winReason, WinReason.timeout);
+          expect(state.gameState.winner, Side.bottom);
+        });
+      },
+    );
+
+    test('the per-move budget resets on a genuine turn change but not mid '
+        'capture-chain', () async {
+      final repos = await createTestRepositories();
+      fakeAsync((async) {
+        final config = _config(perMoveSeconds: 30);
+        final container = ProviderContainer(
+          overrides: [
+            gameClockProvider.overrideWithValue(
+              _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
+            ),
+            settingsRepositoryProvider.overrideWithValue(repos.settings),
+            deviceLanguageCodeProvider.overrideWithValue('en'),
+            hapticsPortProvider.overrideWithValue(_NoopHapticsPort()),
+            profileRepositoryProvider.overrideWithValue(repos.profile),
+            matchHistoryRepositoryProvider.overrideWithValue(
+              repos.matchHistory,
+            ),
+            savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.listen(
+          matchControllerProvider(config),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        final notifier = container.read(
+          matchControllerProvider(config).notifier,
+        );
+
+        async.elapse(const Duration(seconds: 20));
+        notifier.onNodeTapped('r1c2');
+        notifier.onNodeTapped('r2c2');
+
+        final afterMove = container.read(matchControllerProvider(config));
+        expect(
+          afterMove.perMoveRemaining,
+          const Duration(seconds: 30),
+          reason: 'a genuine turn change resets the per-move budget',
+        );
+      });
+    });
+
+    test(
+      'reaching the warning threshold fires the haptic cue exactly once',
+      () async {
+        final repos = await createTestRepositories();
+        fakeAsync((async) {
+          final config = _config(timerMinutes: 1);
+          final haptics = _RecordingHapticsPort();
+          final container = ProviderContainer(
+            overrides: [
+              gameClockProvider.overrideWithValue(
+                _AdapterClock(async.getClock(DateTime(2026, 1, 1))),
+              ),
+              settingsRepositoryProvider.overrideWithValue(repos.settings),
+              deviceLanguageCodeProvider.overrideWithValue('en'),
+              hapticsPortProvider.overrideWithValue(haptics),
+              profileRepositoryProvider.overrideWithValue(repos.profile),
+              matchHistoryRepositoryProvider.overrideWithValue(
+                repos.matchHistory,
+              ),
+              savedGameRepositoryProvider.overrideWithValue(repos.savedGame),
+            ],
+          );
+          addTearDown(container.dispose);
+          container.listen(
+            matchControllerProvider(config),
+            (_, _) {},
+            fireImmediately: true,
+          );
+
+          // 60s total; warning threshold is the last 10s, i.e. at 50s
+          // elapsed.
+          async.elapse(const Duration(seconds: 52));
+          expect(haptics.calls.where((c) => c == 'warning').length, 1);
+
+          // Still within the warning window — must not fire again every
+          // tick.
+          async.elapse(const Duration(seconds: 3));
+          expect(haptics.calls.where((c) => c == 'warning').length, 1);
+        });
+      },
+    );
   });
 
   group('MatchController — persistence (Phase 6)', () {
