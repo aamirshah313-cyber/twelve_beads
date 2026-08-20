@@ -4,12 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:twelve_beads/core/history/match_history_controller.dart';
 import 'package:twelve_beads/core/l10n/gen/app_localizations.dart';
 import 'package:twelve_beads/core/profile/profile_controller.dart';
+import 'package:twelve_beads/core/settings/app_settings.dart';
 import 'package:twelve_beads/core/settings/settings_controller.dart';
 import 'package:twelve_beads/features/game/application/match_config.dart';
 import 'package:twelve_beads/features/game/application/saved_game_controller.dart';
 import 'package:twelve_beads/features/game/presentation/board_painter.dart';
 import 'package:twelve_beads/features/game/presentation/board_widget.dart';
 import 'package:twelve_beads/features/game/presentation/match_screen.dart';
+import 'package:twelve_beads/features/game/presentation/victory_confetti.dart';
 import 'package:twelve_beads/game/ai/difficulty.dart';
 import 'package:twelve_beads/game/board/board_graph.dart';
 import 'package:twelve_beads/features/game/presentation/board_layout.dart';
@@ -343,6 +345,66 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Alice: Well played'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'victory confetti appears on a win when visual quality is High and '
+    'motion is not reduced',
+    (tester) async {
+      await tester.pumpWidget(await _app());
+      final context = tester.element(find.byType(MatchScreen));
+      ProviderScope.containerOf(context)
+          .read(settingsControllerProvider.notifier)
+          .setVisualQuality(VisualQuality.high);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Resign'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Resign').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bilal wins'), findsOneWidget);
+      expect(find.byType(VictoryConfetti), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'victory confetti does not appear when visual quality is Standard '
+    '(the default)',
+    (tester) async {
+      await tester.pumpWidget(await _app());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Resign'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Resign').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bilal wins'), findsOneWidget);
+      expect(find.byType(VictoryConfetti), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'victory confetti does not appear when reduced motion is on, even at '
+    'High visual quality',
+    (tester) async {
+      await tester.pumpWidget(await _app());
+      final context = tester.element(find.byType(MatchScreen));
+      final notifier = ProviderScope.containerOf(context)
+          .read(settingsControllerProvider.notifier);
+      notifier.setVisualQuality(VisualQuality.high);
+      notifier.setReducedMotion(ReducedMotionPreference.on);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Resign'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Resign').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bilal wins'), findsOneWidget);
+      expect(find.byType(VictoryConfetti), findsNothing);
     },
   );
 }

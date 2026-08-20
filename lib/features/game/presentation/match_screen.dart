@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/settings_controller.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../game/engine/game_state.dart';
@@ -19,6 +20,7 @@ import 'board_painter.dart';
 import 'board_widget.dart';
 import 'node_description.dart';
 import 'quick_chat_presentation.dart';
+import 'victory_confetti.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
   const MatchScreen({super.key, required this.config});
@@ -32,6 +34,7 @@ class MatchScreen extends ConsumerStatefulWidget {
 class _MatchScreenState extends ConsumerState<MatchScreen>
     with WidgetsBindingObserver {
   bool _dialogShown = false;
+  bool _showConfetti = false;
 
   @override
   void initState() {
@@ -96,8 +99,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     ref.listen(provider, (previous, next) {
       if (next.gameState.phase == GamePhase.finished && !_dialogShown) {
         _dialogShown = true;
+        // Restrained, High-tier-only celebration on a decisive win, per
+        // "victory confetti only on capable tier" in
+        // 04-ui-ux-and-visual-system.md — never for a draw, and skipped
+        // under reduced motion like every other travel/particle effect.
+        final settings = ref.read(settingsControllerProvider);
+        final celebrate =
+            !next.gameState.isDraw &&
+            settings.visualQuality == VisualQuality.high &&
+            !resolveReducedMotion(settings.reducedMotion);
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _showMatchOverDialog(context, next, l10n, controller);
+          if (!mounted) return;
+          if (celebrate) setState(() => _showConfetti = true);
+          _showMatchOverDialog(context, next, l10n, controller);
         });
       }
     });
@@ -185,6 +199,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                 name: widget.config.nameForSide(quickChat.side!),
                 phraseId: quickChat.phraseId!,
               ),
+            if (_showConfetti) const Positioned.fill(child: VictoryConfetti()),
             if (matchState.isPaused)
               _PausedOverlay(l10n: l10n, onResume: controller.resume),
           ],
@@ -272,6 +287,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     );
     if (confirmed == true) {
       _dialogShown = false;
+      if (_showConfetti) setState(() => _showConfetti = false);
       controller.restart();
     }
   }
@@ -406,6 +422,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             onPressed: () {
               Navigator.of(dialogContext).pop();
               _dialogShown = false;
+              if (_showConfetti) setState(() => _showConfetti = false);
               controller.restart();
             },
             child: Text(l10n.matchOverNewMatchButton),
