@@ -40,8 +40,23 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Center(
-                  child: Text(displayName, style: textTheme.headlineSmall),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        displayName,
+                        style: textTheme.headlineSmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: l10n.profileEditNameTooltip,
+                      onPressed: () =>
+                          _editDisplayName(context, ref, l10n, displayName),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 if (stats.matchesPlayed == 0)
@@ -121,6 +136,67 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _editDisplayName(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    String currentName,
+  ) async {
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) =>
+          _EditNameDialog(l10n: l10n, currentName: currentName),
+    );
+    if (newName == null || newName.isEmpty) return;
+    ref.read(profileControllerProvider.notifier).setDisplayName(newName);
+  }
+}
+
+class _EditNameDialog extends StatefulWidget {
+  const _EditNameDialog({required this.l10n, required this.currentName});
+
+  final AppLocalizations l10n;
+  final String currentName;
+
+  @override
+  State<_EditNameDialog> createState() => _EditNameDialogState();
+}
+
+class _EditNameDialogState extends State<_EditNameDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.currentName,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.l10n.profileEditNameTitle),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLength: 24,
+        textCapitalization: TextCapitalization.words,
+        onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(widget.l10n.commonCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(widget.l10n.commonSave),
+        ),
+      ],
     );
   }
 }

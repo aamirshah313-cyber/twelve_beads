@@ -130,6 +130,8 @@
 
   "profileScreenTitle": "Profile",
   "profileDefaultName": "Player",
+  "profileEditNameTooltip": "Edit display name",
+  "profileEditNameTitle": "Display name",
   "profileStatsMatches": "Matches",
   "profileStatsWins": "Wins",
   "profileStatsLosses": "Losses",

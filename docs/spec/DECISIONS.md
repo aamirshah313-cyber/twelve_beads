@@ -303,3 +303,35 @@ All of D-003 through D-009 are implemented as the single named `Ruleset.classicA
       pre-game form's existing `DropdownMenu`-per-setting layout
       consistent rather than introducing a new interaction pattern for
       just these two fields.
+
+  - **Third gap found the same way**: 04-ui-ux-and-visual-system.md's
+    "States and motion" line ("victory confetti only on capable tier")
+    was unimplemented. Added `VictoryConfetti`, a self-contained,
+    `IgnorePointer`d, one-shot (1.6s) `CustomPainter` burst shown only
+    when `VisualQuality.high` *and* the match ended in a win (not a
+    draw) *and* reduced motion is off — gated in `MatchScreen`'s
+    existing match-finished `ref.listen`, alongside the pre-existing
+    match-over-dialog trigger, and reset on restart/new match the same
+    way `_dialogShown` already was. Deterministic seed (`Random(7)`),
+    not truly random per play, since this is decoration rather than a
+    game-state-derived cue — consistent with this project's general
+    "restrained, not unverified-cost" approach to High-tier effects.
+  - **Fourth gap found the same way**: 01-product-requirements.md's
+    "Profiles: local display name/avatar selection" line was only
+    half-built — `ProfileController.setDisplayName` existed and was
+    fully wired to persistence, but nothing in the UI ever called it;
+    the Profile screen only *displayed* `stats.displayName`, with no
+    way to set it. Added an edit-pencil `IconButton` next to the name
+    on `ProfileScreen`, opening a small `AlertDialog`
+    (`_EditNameDialog`, a dedicated `StatefulWidget` so its
+    `TextEditingController` is created/disposed on the dialog's own
+    lifecycle rather than raced against the dialog's closing
+    animation) with Cancel/Save; an empty/whitespace-only name is
+    discarded rather than saved. Avatar *selection* (choosing among
+    multiple icons/colors, beyond the existing initial-letter
+    `CircleAvatar`) was left out: 01 states "One default profile is
+    sufficient; support multiple local profiles if low-cost," and
+    avatar picking is decoration with no gameplay or accessibility
+    consequence, unlike the display name (which appears in quick chat,
+    match history, and the turn banner) — a deliberate scope line, not
+    an oversight.

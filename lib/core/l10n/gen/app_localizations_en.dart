@@ -311,6 +311,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileDefaultName => 'Player';
 
   @override
+  String get profileEditNameTooltip => 'Edit display name';
+
+  @override
+  String get profileEditNameTitle => 'Display name';
+
+  @override
   String get profileStatsMatches => 'Matches';
 
   @override

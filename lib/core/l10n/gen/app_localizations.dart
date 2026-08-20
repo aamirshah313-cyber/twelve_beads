@@ -632,6 +632,18 @@ abstract class AppLocalizations {
   /// **'Player'**
   String get profileDefaultName;
 
+  /// No description provided for @profileEditNameTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit display name'**
+  String get profileEditNameTooltip;
+
+  /// No description provided for @profileEditNameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get profileEditNameTitle;
+
   /// No description provided for @profileStatsMatches.
   ///
   /// In en, this message translates to:

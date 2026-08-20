@@ -32,7 +32,10 @@ stats, badges, match history, an in-progress match) stays on the device.
 - Local quick chat: a small set of preset phrases ("Good move", "Your
   turn", ...) shown as a transient, auto-dismissing overlay during a
   match — no free text, no transmission, purely local and decorative.
-- Local profile stats, six badges, and a capped match-history list.
+- Local profile stats, an editable local display name, six badges, and
+  a capped match-history list.
+- A restrained, deterministic victory confetti burst on High visual
+  quality (skipped for draws and when reduced motion is on).
 - Resume: an in-progress match survives an app restart and can be resumed
   (landing paused) or discarded from the home screen.
 - Adaptive visual-quality tiers (Low/Standard/High) and a "delete all local

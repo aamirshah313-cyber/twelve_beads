@@ -95,6 +95,8 @@
 
   "profileScreenTitle": "پروفائل",
   "profileDefaultName": "کھلاڑی",
+  "profileEditNameTooltip": "ڈسپلے نام میں ترمیم کریں",
+  "profileEditNameTitle": "ڈسپلے نام",
   "profileStatsMatches": "میچز",
   "profileStatsWins": "جیت",
   "profileStatsLosses": "شکست",

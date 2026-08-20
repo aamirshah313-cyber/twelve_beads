@@ -312,6 +312,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get profileDefaultName => 'کھلاڑی';
 
   @override
+  String get profileEditNameTooltip => 'ڈسپلے نام میں ترمیم کریں';
+
+  @override
+  String get profileEditNameTitle => 'ڈسپلے نام';
+
+  @override
   String get profileStatsMatches => 'میچز';
 
   @override
